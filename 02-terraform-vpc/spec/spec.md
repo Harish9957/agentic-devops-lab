@@ -8,6 +8,30 @@ Terraform use case, built without an installed Terraform "skill"/plugin on purpo
 learning the fundamentals (provider config, resource dependencies, plan vs. apply, state) alongside
 building, not getting a correct-looking result from baked-in conventions.
 
+## Inputs
+
+Configurable via `variables.tf`, all with defaults — `terraform plan`/`apply` need no `-var` flags
+unless overriding one:
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `aws_region` | AWS region to create the VPC in | `us-east-1` |
+| `name` | Name prefix applied to all resources | `agentic-devops-lab-02` |
+| `vpc_cidr` | CIDR block for the VPC | `10.0.0.0/16` |
+| `public_subnet_cidr` | CIDR block for the public subnet | `10.0.1.0/24` |
+| `availability_zone` | AZ for the public subnet | `us-east-1a` |
+
+## Outputs
+
+Exposed via `outputs.tf` once applied. A later use case that needs this VPC (an EKS cluster, EC2
+instances, etc.) should consume these — via `terraform_remote_state` once `02` has a remote backend,
+or passed in explicitly for now — rather than hardcoding IDs:
+
+| Output | What it is |
+|---|---|
+| `vpc_id` | ID of the created VPC |
+| `public_subnet_id` | ID of the public subnet |
+
 ## Non-Negotiable Rules
 
 1. **Phased progression**: same as `01-kind-nginx` — complete phases sequentially, confirm each
@@ -36,4 +60,7 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 ✓ Phase 0 — Preflight              PASSED
 ✓ Phase 1 — Plan reviewed          PASSED
 ⧗ Phase 2 — Apply                  BLOCKED (awaiting your explicit go-ahead)
+
+vpc_id:            (populated by `terraform output` after apply — see Outputs)
+public_subnet_id:  (populated by `terraform output` after apply — see Outputs)
 ```
