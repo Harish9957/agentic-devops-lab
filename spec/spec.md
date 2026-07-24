@@ -30,6 +30,9 @@ phase N-1's gate has passed.
 Later phases (KEDA autoscaling, GitOps for agent config, GPU/HAMi, GitLab CI) get scoped and added
 here once phase 2 is solid — don't pre-write the whole roadmap up front.
 
+Cluster teardown is not a phase (it's a reset, not forward progress) — see
+[`teardown.md`](./teardown.md).
+
 ## Completion Promise
 
 After all phases pass the agent will output:
