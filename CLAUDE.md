@@ -4,76 +4,77 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A personal sandbox for experimenting with agentic AI / DevOps patterns on a local
+A personal sandbox for experimenting with agentic AI / DevOps patterns, mostly on a local
 [Kind](https://kind.sigs.k8s.io/) (Kubernetes-in-Docker) cluster. No production stakes — this is
 where new ideas get tried before they'd ever be proposed at work. The owner is a DevOps engineer
 strong in Kubernetes, Terraform, GitLab CI, AWS, GPU scheduling (HAMi), KEDA, and Karpenter, using
 this repo to explore what of that translates into an AI-native platform.
 
-The first exercise (`agent.py`) is Claude itself acting as the agentic CLI that drives a kind
-cluster through `spec/spec.md`'s phases via a single `run_command` tool — see Architecture below.
+## Repo structure
+
+Each use case is a numbered top-level directory (`01-kind-nginx/`, `02-...`, etc.), expected to grow
+to roughly two dozen over time. Conventions:
+
+- The numbered prefix is load-bearing — don't reorder or renumber existing directories.
+- Each use case is self-contained: its own `spec/` (goal, rules, phase docs — see Process below),
+  its own manifests/scripts/tests. Nothing outside a use case's own directory should need to change
+  when that use case's internals change.
+- Shared, cross-use-case things stay at repo root: this `CLAUDE.md`, `requirements.txt`, the shared
+  `.venv/`, and `.env` (credentials — Anthropic API key, etc. — reused across use cases rather than
+  duplicated per directory).
+- Only scope and write the next use case once the current one is solid. Don't pre-create empty
+  numbered folders for use cases that haven't been designed yet.
+
+### Use cases
+
+| # | Directory | What it is |
+|---|-----------|------------|
+| 01 | [`01-kind-nginx/`](./01-kind-nginx/) | Claude (`agent.py`) drives a kind cluster from scratch and deploys nginx onto it, phase by phase |
 
 ## Commands
 
+One-time setup (repo root):
+
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...    # or however credentials are provided
-python3 agent.py                # runs the full spec.md phase progression
 ```
 
-Manual / debugging equivalents of what the agent does:
+Running a use case's agent (from inside that use case's directory, so its relative paths resolve):
 
 ```bash
-kind create cluster --name devops-01 --config kind-config.yaml
-kubectl config use-context kind-devops-01
-bash tests/validate_cluster.sh
-kubectl apply -f manifests/nginx-deployment.yaml
-kubectl rollout status deployment/nginx -n default --timeout=120s
-bash tests/validate_nginx.sh
+cd 01-kind-nginx
+python3 agent.py    # runs the full spec/spec.md phase progression; needs ANTHROPIC_API_KEY in ../.env
 ```
 
-Tear down: `kind delete cluster --name devops-01`.
+## Process (applies to every use case)
 
-## Architecture
+- `spec/spec.md` + `spec/phases/phaseN-*.md`: `spec.md` states the overall goal and non-negotiable
+  rules and links to phase docs; each `phaseN-*.md` has its own goal, steps, and completion gate.
+  Don't start phase N until phase N-1's gate is checked off. Only write the next phase doc once the
+  current one is solid — don't pre-write the whole roadmap.
+- **Tests are the actual gate, not the model's judgment.** Every use case's completion gates should
+  be backed by a real script with a hard pass/fail exit code, not the agent's self-report.
+- Teardown/reset operations are not phases (a phase implies forward progress that later phases build
+  on; teardown is the opposite). Give them their own unnumbered `spec/teardown.md` instead — see
+  `01-kind-nginx/spec/teardown.md` for the pattern.
 
-- `agent.py` is a minimal agent loop against the Anthropic Messages API: one tool (`run_command`,
-  arbitrary shell) and a system prompt that tells the model to execute `spec.md` phase by phase,
-  never assume a command succeeded, and stop on the first failure. There's no other tool — the
-  model does everything (checking cluster state, applying manifests, running tests) by shelling out.
-- The **tests are the actual gate**, not the model's judgment: `tests/validate_cluster.sh` and
-  `tests/validate_nginx.sh` are plain bash scripts with hard pass/fail exit codes. The agent is
-  instructed to run them and treat a nonzero exit as a stop condition.
-- `spec/spec.md` + `spec/phases/phaseN-*.md` is the process this and future exercises follow:
-  `spec/spec.md` states the overall goal and non-negotiable rules and links to phase docs; each
-  `spec/phases/phaseN-*.md` has its own goal, steps, and completion gate. Don't start phase N until
-  phase N-1's gate is checked off. Only write the next phase doc once the current one is solid —
-  don't pre-write the whole roadmap.
-
-## Cluster conventions
-
-- Cluster name: `devops-01`, kubectl context `kind-devops-01` (both hardcoded in the test scripts —
-  keep them in sync if either ever changes).
-- Two nodes: control-plane + worker (`kind-config.yaml`).
-- Namespaces: `default` for now; move to one-per-logical-area, descriptive kebab-case, if later
-  phases add distinct components.
-- Verify `kubectl config current-context` before any mutating command if more than one cluster
-  context exists on this machine.
-
-## Notes on strengths vs. this environment
+## Notes on strengths vs. a local Kind cluster
 
 Some of the owner's usual tools are cloud- or hardware-specific and don't map 1:1 onto a local Kind
 cluster — call this out explicitly in a phase doc rather than silently skipping or faking it:
 
 - **Karpenter** provisions real cloud nodes; it has no meaning on Kind's fixed set of
-  Docker-container "nodes". A phase that wants to explore Karpenter needs a real cloud target (or
+  Docker-container "nodes". A use case that wants to explore Karpenter needs a real cloud target (or
   scope itself to reading/adapting Karpenter's provisioning concepts, not running it).
 - **GPU / HAMi** need a GPU actually passed through to the Kind node's container runtime. Not
-  checked yet on this machine — confirm before assuming a HAMi phase can run as designed.
+  checked yet on this machine — confirm before assuming a HAMi use case can run as designed.
 - **KEDA** and general autoscaling-on-metrics work fine on Kind as-is.
 - **GitLab** can run in-cluster (Helm chart) or be simulated with a local runner against
-  gitlab.com — pick per phase depending on whether the point is GitLab CI/CD or just "a git remote".
-- **Terraform**: not used for cluster creation yet (plain `kind create cluster` for now per
-  phase1); revisit once there's enough to declare that Terraform earns its keep.
+  gitlab.com — pick per use case depending on whether the point is GitLab CI/CD or just "a git remote".
+- **Terraform**: not used for cluster creation yet (plain `kind create cluster` in `01-kind-nginx`);
+  revisit once there's enough to declare that Terraform earns its keep.
 
 ## Writing standards for docs in this repo
 
