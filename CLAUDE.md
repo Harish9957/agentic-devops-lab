@@ -11,7 +11,7 @@ strong in Kubernetes, Terraform, GitLab CI, AWS, GPU scheduling (HAMi), KEDA, an
 this repo to explore what of that translates into an AI-native platform.
 
 The first exercise (`agent.py`) is Claude itself acting as the agentic CLI that drives a kind
-cluster through `spec.md`'s phases via a single `run_command` tool — see Architecture below.
+cluster through `spec/spec.md`'s phases via a single `run_command` tool — see Architecture below.
 
 ## Commands
 
@@ -43,10 +43,11 @@ Tear down: `kind delete cluster --name devops-01`.
 - The **tests are the actual gate**, not the model's judgment: `tests/validate_cluster.sh` and
   `tests/validate_nginx.sh` are plain bash scripts with hard pass/fail exit codes. The agent is
   instructed to run them and treat a nonzero exit as a stop condition.
-- `spec.md` + `phaseN-*.md` is the process this and future exercises follow: `spec.md` states the
-  overall goal and non-negotiable rules and links to phase docs; each `phaseN-*.md` has its own
-  goal, steps, and completion gate. Don't start phase N until phase N-1's gate is checked off. Only
-  write the next phase doc once the current one is solid — don't pre-write the whole roadmap.
+- `spec/spec.md` + `spec/phases/phaseN-*.md` is the process this and future exercises follow:
+  `spec/spec.md` states the overall goal and non-negotiable rules and links to phase docs; each
+  `spec/phases/phaseN-*.md` has its own goal, steps, and completion gate. Don't start phase N until
+  phase N-1's gate is checked off. Only write the next phase doc once the current one is solid —
+  don't pre-write the whole roadmap.
 
 ## Cluster conventions
 

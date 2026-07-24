@@ -23,9 +23,9 @@ see the notes in `CLAUDE.md` on which of those do and don't map onto a local Kin
 Each phase has its own doc with the full goal, steps, and completion gate. Don't start phase N until
 phase N-1's gate has passed.
 
-- [`phase0-preflight.md`](./phase0-preflight.md) — confirm tooling and Docker are ready
-- [`phase1-create-cluster.md`](./phase1-create-cluster.md) — create the kind cluster, validate health
-- [`phase2-deploy-nginx.md`](./phase2-deploy-nginx.md) — deploy nginx, validate it's reachable
+- [`phases/phase0-preflight.md`](./phases/phase0-preflight.md) — confirm tooling and Docker are ready
+- [`phases/phase1-create-cluster.md`](./phases/phase1-create-cluster.md) — create the kind cluster, validate health
+- [`phases/phase2-deploy-nginx.md`](./phases/phase2-deploy-nginx.md) — deploy nginx, validate it's reachable
 
 Later phases (KEDA autoscaling, GitOps for agent config, GPU/HAMi, GitLab CI) get scoped and added
 here once phase 2 is solid — don't pre-write the whole roadmap up front.
