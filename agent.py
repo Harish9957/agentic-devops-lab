@@ -8,7 +8,7 @@ import sys
 import anthropic
 
 client = anthropic.Anthropic()
-MODEL = "claude-opus-4-7"
+MODEL = "claude-sonnet-5"
 
 TOOLS = [
     {
