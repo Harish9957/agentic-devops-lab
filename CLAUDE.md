@@ -30,6 +30,7 @@ to roughly two dozen over time. Conventions:
 | # | Directory | What it is |
 |---|-----------|------------|
 | 01 | [`01-kind-nginx/`](./01-kind-nginx/) | Claude (`agent.py`) drives a kind cluster from scratch and deploys nginx onto it, phase by phase |
+| 02 | [`02-terraform-vpc/`](./02-terraform-vpc/) | Minimal AWS VPC (VPC + public subnet + IGW + route table) written by hand in Terraform, no installed Terraform skill/plugin — first real-cloud use case |
 
 ## Commands
 
@@ -60,6 +61,16 @@ python3 agent.py    # runs the full spec/spec.md phase progression; needs ANTHRO
   on; teardown is the opposite). Give them their own unnumbered `spec/teardown.md` instead — see
   `01-kind-nginx/spec/teardown.md` for the pattern.
 
+## Safety rule for any use case touching real cloud resources
+
+`01-kind-nginx` is local-only, so `kind create`/`kind delete` were fine to run proactively. Any use
+case against a real cloud account (starting with `02-terraform-vpc`) is different: **never run
+`terraform apply` or `terraform destroy` (or equivalent real-cloud-mutating commands) without the
+user's explicit go-ahead for that specific run.** A general "go ahead and build 02" is not
+authorization to apply — `init`/`validate`/`plan` (or `plan -destroy`) are fine to run and show
+freely; the mutating command itself always waits for an explicit yes, every time, not just once per
+use case.
+
 ## Notes on strengths vs. a local Kind cluster
 
 Some of the owner's usual tools are cloud- or hardware-specific and don't map 1:1 onto a local Kind
@@ -73,8 +84,10 @@ cluster — call this out explicitly in a phase doc rather than silently skippin
 - **KEDA** and general autoscaling-on-metrics work fine on Kind as-is.
 - **GitLab** can run in-cluster (Helm chart) or be simulated with a local runner against
   gitlab.com — pick per use case depending on whether the point is GitLab CI/CD or just "a git remote".
-- **Terraform**: not used for cluster creation yet (plain `kind create cluster` in `01-kind-nginx`);
-  revisit once there's enough to declare that Terraform earns its keep.
+- **Terraform**: used starting in `02-terraform-vpc` for direct AWS resource management, written by
+  hand (no installed Terraform skill/plugin) so the fundamentals get learned alongside building, not
+  abstracted away. `01-kind-nginx` still uses plain `kind create cluster` — Terraform for the local
+  Kind cluster itself is a separate, later consideration.
 
 ## Writing standards for docs in this repo
 
