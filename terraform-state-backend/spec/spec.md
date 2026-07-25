@@ -65,8 +65,11 @@ against real AWS. Floci has no such constraint.
 ```
 ✓ Phase 0 — Preflight              PASSED
 ✓ Phase 1 — Plan reviewed          PASSED
-⧗ Phase 2 — Apply + migration      BLOCKED (awaiting your explicit go-ahead)
+✓ Phase 2 — Apply + migration      PASSED (against Floci, authorized 2026-07-25)
 
-bucket_name:           (populated by `terraform output` after apply)
-dynamodb_table_name:   (populated by `terraform output` after apply)
+bucket_name:           agentic-devops-lab-tfstate   (Floci-emulated, not real AWS)
+dynamodb_table_name:   agentic-devops-lab-tflocks   (Floci-emulated, not real AWS)
 ```
+
+`02-terraform-vpc`'s state now lives here (key `02-terraform-vpc/terraform.tfstate`), migrated with
+all 10 resources intact and locking verified working.

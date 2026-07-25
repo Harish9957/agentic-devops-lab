@@ -1,0 +1,12 @@
+# Rename to backend-aws.hcl and use with:
+#   terraform init -backend-config=backend-aws.hcl -migrate-state
+# once real AWS credentials are configured. bucket_name must match whatever
+# terraform-state-backend was actually applied with against real AWS (its default
+# "agentic-devops-lab-tfstate" will very likely collide with someone else's bucket —
+# see terraform-state-backend/spec/spec.md's real-AWS note).
+
+bucket         = "agentic-devops-lab-tfstate" # override with your actual unique bucket name
+key            = "02-terraform-vpc/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "agentic-devops-lab-tflocks"
+encrypt        = true

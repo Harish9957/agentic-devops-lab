@@ -74,3 +74,17 @@ Outputs updated: `private_subnet_id = subnet-9f7fb509`. Independently verified v
 `aws ec2 describe-subnets --subnet-ids subnet-9f7fb509` — `State: available`,
 `AvailabilityZone: us-east-1b`, `MapPublicIpOnLaunch: false` (correctly private, unlike the public
 subnet). Same local-only, non-billable scope as the base VPC.
+
+**State migrated to remote backend (same day):** state for this use case moved from local
+`terraform.tfstate` to the shared S3 bucket + DynamoDB lock table in `../terraform-state-backend/`.
+`provider.tf` now has an empty `backend "s3" {}` block (backend blocks can't reference variables, so
+the actual config is external); `backend-floci.hcl` supplies the Floci-targeted bucket/key/table plus
+endpoint overrides, `backend-aws.hcl.example` is the template for real AWS once credentials exist. Ran
+`terraform init -backend-config=backend-floci.hcl -migrate-state`, confirmed the copy prompt. Counted
+resources before (10) and after (`terraform state list`, still 10) migrating — nothing lost.
+Confirmed the state object genuinely lives in Floci's S3
+(`aws s3 ls s3://agentic-devops-lab-tfstate/02-terraform-vpc/`), not just Terraform reporting success.
+Verified locking actually functions, not just that the table exists: started a background
+`terraform plan` and polled `aws dynamodb scan` on the lock table — a lock item
+(`Operation: OperationTypePlan`) appeared mid-plan and was released after. Full details and the
+backend's own build/verification: `../terraform-state-backend/spec/phases/phase2-apply.md`.

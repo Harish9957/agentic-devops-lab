@@ -28,8 +28,8 @@ unless overriding one:
 ## Outputs
 
 Exposed via `outputs.tf` once applied. A later use case that needs this VPC (an EKS cluster, EC2
-instances, etc.) should consume these — via `terraform_remote_state` once `02` has a remote backend,
-or passed in explicitly for now — rather than hardcoding IDs:
+instances, etc.) should consume these via `terraform_remote_state`, pointed at the shared
+`terraform-state-backend/` bucket/key (see below) — rather than hardcoding IDs:
 
 | Output | What it is |
 |---|---|
@@ -46,9 +46,11 @@ or passed in explicitly for now — rather than hardcoding IDs:
 3. **No `apply` or `destroy` without explicit go-ahead, every single time** — not just once at the
    start of this use case. This is a repo-wide rule for any real-cloud work (see root `CLAUDE.md`);
    it's called out here because this is the first use case where it applies.
-4. **Local state only** for this exercise. Remote state backends (S3 + DynamoDB locking, etc.) are
-   a deliberately separate, later use case — don't conflate learning VPC basics with learning state
-   management in the same pass.
+4. **Remote state with locking**: state lives in the shared S3 bucket + DynamoDB lock table defined
+   in [`../terraform-state-backend/`](../terraform-state-backend/), not locally. This started as
+   local-only state (deliberately, to not conflate learning VPC basics with state management in the
+   same pass) and was migrated once that was solid — see phase 2 notes and
+   `terraform-state-backend/spec/phases/phase2-apply.md` for how the migration was done and verified.
 
 ## Phases
 

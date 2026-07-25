@@ -6,6 +6,11 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  # Backend config (bucket/key/table/endpoints) is supplied via -backend-config=backend.hcl —
+  # backend blocks can't reference variables, so the use_floci toggle can't reach this block
+  # directly. See backend.hcl / backend-floci.hcl and terraform-state-backend/ for the source.
+  backend "s3" {}
 }
 
 provider "aws" {
