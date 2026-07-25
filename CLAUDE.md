@@ -88,6 +88,11 @@ cluster — call this out explicitly in a phase doc rather than silently skippin
   hand (no installed Terraform skill/plugin) so the fundamentals get learned alongside building, not
   abstracted away. `01-kind-nginx` still uses plain `kind create cluster` — Terraform for the local
   Kind cluster itself is a separate, later consideration.
+- **Floci** ([floci.io](https://floci.io/)): a local, LocalStack-compatible AWS emulator, used as an
+  alternative to real AWS credentials while iterating on Terraform use cases. `02-terraform-vpc`'s
+  `provider.tf` has a `use_floci` variable (default `false`) that points the AWS provider at
+  `http://localhost:4566` instead of real AWS when set. The apply/destroy go-ahead rule above applies
+  identically to Floci — it's a convenience for iterating on `plan`, not a loosening of the gate.
 
 ## Writing standards for docs in this repo
 

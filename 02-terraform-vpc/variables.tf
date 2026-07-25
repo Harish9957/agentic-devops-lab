@@ -27,3 +27,9 @@ variable "availability_zone" {
   type        = string
   default     = "us-east-1a"
 }
+
+variable "use_floci" {
+  description = "Point the AWS provider at a local Floci emulator (http://localhost:4566) instead of real AWS. Default false — real AWS is the unchanged default behavior."
+  type        = bool
+  default     = false
+}

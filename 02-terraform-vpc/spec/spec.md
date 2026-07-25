@@ -20,6 +20,7 @@ unless overriding one:
 | `vpc_cidr` | CIDR block for the VPC | `10.0.0.0/16` |
 | `public_subnet_cidr` | CIDR block for the public subnet | `10.0.1.0/24` |
 | `availability_zone` | AZ for the public subnet | `us-east-1a` |
+| `use_floci` | Target a local [Floci](https://floci.io/) emulator (`http://localhost:4566`) instead of real AWS | `false` |
 
 ## Outputs
 
@@ -57,8 +58,8 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 ## Completion Promise
 
 ```
-✓ Phase 0 — Preflight              PASSED
-✓ Phase 1 — Plan reviewed          PASSED
+✓ Phase 0 — Preflight              PASSED (Floci path; real-AWS path still blocked on credentials)
+✓ Phase 1 — Plan reviewed          PASSED (against Floci — 5 to add, 0 to change, 0 to destroy)
 ⧗ Phase 2 — Apply                  BLOCKED (awaiting your explicit go-ahead)
 
 vpc_id:            (populated by `terraform output` after apply — see Outputs)
