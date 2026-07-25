@@ -13,7 +13,7 @@ Phase 0 (terraform + AWS/Floci credentials confirmed; `02`'s remote state confir
 ## Steps
 
 1. `provider.tf` — same provider/backend shape as `02-terraform-vpc` (S3 backend, `use_floci`
-   toggle), backend key `03-terraform-app/terraform.tfstate`.
+   toggle), backend key `03-terraform-app-tier/terraform.tfstate`.
 2. `remote_state.tf` — `terraform_remote_state` data source reading `02-terraform-vpc`'s state;
    exposes `data.terraform_remote_state.vpc.outputs.private_subnet_id` etc.
 3. `variables.tf` — instance type, AMI (or `data "aws_ami"` lookup), name prefix.

@@ -38,7 +38,7 @@ Added per-phase as resources are created. Anticipated, not yet real:
    root `CLAUDE.md`), applies identically here to every resource this use case adds.
 4. **Remote state from the start**: unlike `02` (which started local and migrated once solid), this
    use case goes straight to the shared S3 + DynamoDB backend in `../terraform-state-backend/`, key
-   `03-terraform-app/terraform.tfstate` — that migration was already learned and verified in `02`, no
+   `03-terraform-app-tier/terraform.tfstate` — that migration was already learned and verified in `02`, no
    need to relearn it here.
 5. **Consume `02`'s outputs via `terraform_remote_state`, never hardcode IDs**: `vpc_id` and
    `private_subnet_id` (and `public_subnet_id` for the ALB) come from a `terraform_remote_state` data
