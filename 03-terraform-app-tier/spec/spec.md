@@ -102,4 +102,10 @@ eks_cluster_name:     agentic-devops-lab-03-eks       (Floci-emulated, not real 
 eks_cluster_endpoint: https://localhost:6501          (Floci-emulated, not real AWS)
 node_group_name:      agentic-devops-lab-03-node      (Floci-emulated, not real AWS)
 alb_dns_name:         app-20260725170316887600000001-e7d0c4d1277748f5.elb.localhost.floci.io (Floci)
+
+✓ Teardown              DESTROYED (2026-07-25) — all 15 phase-3 resources torn down against Floci
+                         after explicit go-ahead, independently confirmed gone (empty terraform
+                         state, no lingering Docker containers). See teardown.md. 02-terraform-vpc
+                         untouched. Rebuildable from the current .tf files with a fresh
+                         `terraform apply` whenever needed.
 ```
