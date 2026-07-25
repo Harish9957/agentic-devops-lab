@@ -60,8 +60,8 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 ```
 ✓ Phase 0 — Preflight              PASSED (Floci path; real-AWS path still blocked on credentials)
 ✓ Phase 1 — Plan reviewed          PASSED (against Floci — 5 to add, 0 to change, 0 to destroy)
-⧗ Phase 2 — Apply                  BLOCKED (awaiting your explicit go-ahead)
+✓ Phase 2 — Apply                  PASSED (against Floci, authorized 2026-07-25)
 
-vpc_id:            (populated by `terraform output` after apply — see Outputs)
-public_subnet_id:  (populated by `terraform output` after apply — see Outputs)
+vpc_id:            vpc-e705db27      (Floci-emulated, not real AWS)
+public_subnet_id:  subnet-d7a7dd89   (Floci-emulated, not real AWS)
 ```
