@@ -2,12 +2,17 @@
 
 ## Goal
 
-Build the app-tier AWS resources on top of `02-terraform-vpc`'s network foundation: an EC2 instance
-in the private subnet, an Application Load Balancer in the public subnet routing to it, and a
-DynamoDB table the instance talks to. These three resources form one cohesive architecture (ALB →
-EC2 → DynamoDB) and share a single use case rather than each getting its own numbered folder — see
-`CLAUDE.md`'s use-case table for why (numbers mark distinct concepts/milestones, not one per AWS
-resource type).
+Build the app-tier AWS resources on top of `02-terraform-vpc`'s network foundation: an EKS cluster
++ node group in the private subnet running nginx as a Kubernetes Pod (Deployment + Service +
+HorizontalPodAutoscaler), an Application Load Balancer in the public subnet routing to it, and a
+DynamoDB table the app talks to. These form one cohesive architecture (ALB → EKS/nginx → DynamoDB)
+and share a single use case rather than each getting its own numbered folder — see `CLAUDE.md`'s
+use-case table for why (numbers mark distinct concepts/milestones, not one per AWS resource type).
+
+This started as a bare EC2 instance (phase 1), then EC2 under ASG management (phase 2), then moved
+to EKS (phase 3) once testing showed Floci's EKS support has far better fidelity than its EC2/ALB
+emulation — a real k3s server, not just API mocking. See `phases/phase2-alb-asg.md`'s superseded
+note and `phases/phase3-eks-nginx-hpa.md` for why.
 
 This use case never duplicates `02`'s VPC/subnet resources. It consumes them read-only via a
 `terraform_remote_state` data source pointed at the shared backend in `../terraform-state-backend/`.
@@ -23,10 +28,11 @@ Added per-phase as resources are created. Anticipated, not yet real:
 
 | Output | What it is |
 |---|---|
-| `asg_name` | Name of the Auto Scaling Group managing the app-tier instances |
-| `launch_template_id` | ID of the launch template the ASG uses |
+| `eks_cluster_name` | Name of the EKS cluster |
+| `eks_cluster_endpoint` | Kubernetes API server endpoint for the EKS cluster |
+| `node_group_name` | Name of the EKS managed node group running the nginx Pod |
 | `alb_dns_name` | Public DNS name of the Application Load Balancer |
-| `target_group_arn` | ARN of the ALB target group the ASG registers instances into |
+| `target_group_arn` | ARN of the ALB target group the node group's instances register into |
 | `dynamodb_table_name` | Name of the DynamoDB table (not yet built) |
 
 ## Non-Negotiable Rules
@@ -47,30 +53,35 @@ Added per-phase as resources are created. Anticipated, not yet real:
    source reading `02-terraform-vpc`'s state, exactly as `02`'s own spec anticipated for any later
    use case needing its VPC.
 6. **Design rule inherited from `02`, still non-negotiable here**: compute goes in the private
-   subnet, never the public one. The ASG's instances use `private_subnet_id`; only the ALB itself
-   (internet-facing by nature) uses `public_subnet_id`. DynamoDB is a regional service, not
-   VPC-attached, so this rule doesn't apply to it directly — but nothing else this use case adds
+   subnet, never the public one. The EKS node group's instances use `private_subnet_id`; only the
+   ALB itself (internet-facing by nature) uses `public_subnet_id`. DynamoDB is a regional service,
+   not VPC-attached, so this rule doesn't apply to it directly — but nothing else this use case adds
    should end up in the public subnet.
 7. **ALB needs 2+ AZs — resolved, not just documented**: `02-terraform-vpc` originally had only one
    public subnet. Confirmed empirically (not just from docs) that even Floci enforces AWS's 2-AZ
    requirement for ALBs — a single-subnet apply genuinely failed. Fixed by adding a second public
    subnet to `02` (`us-east-1c`) — see `02-terraform-vpc/spec/phases/phase2-apply.md` and this use
    case's `phases/phase2-alb-asg.md`.
-8. **Floci is a control-plane emulator for ALB/EC2, not a full data-plane one**: `user_data` never
-   executes (each instance is a bare container), and the ALB's DNS name doesn't actually proxy
-   traffic. Both are Floci-specific limitations, not defects in this use case's Terraform — see
-   `phases/phase2-alb-asg.md` Notes for how reachability was verified within what Floci actually
-   supports, and what would differ on real AWS.
+8. **Floci is a control-plane emulator for ALB/EC2, not a full data-plane one — but its EKS support
+   is much better**: EC2's `user_data` never executes and the ALB's DNS name doesn't actually proxy
+   traffic (both Floci-specific, not defects here — see `phases/phase2-alb-asg.md` Notes). EKS,
+   however, runs a genuine `rancher/k3s` server with a real API and `metrics-server` — confirmed
+   empirically before committing to it, not assumed. This is why phase 3 moved compute onto EKS: see
+   `phases/phase3-eks-nginx-hpa.md` for what still doesn't work there (cluster security group,
+   node-group-to-ASG attachment) versus what does (kubectl, Deployments, Services, working HPA).
 
 ## Phases
 
 - [`phases/phase0-preflight.md`](./phases/phase0-preflight.md) — confirm terraform + AWS/Floci
   credentials, confirm `02`'s remote state is actually readable from here
-- [`phases/phase1-ec2.md`](./phases/phase1-ec2.md) — EC2 instance in the private subnet, applied
+- [`phases/phase1-ec2.md`](./phases/phase1-ec2.md) — EC2 instance in the private subnet, applied,
+  superseded by phase 3
 - [`phases/phase2-alb-asg.md`](./phases/phase2-alb-asg.md) — EC2 converted to ASG management, ALB
-  spanning both public subnets routing to it, nginx running, applied
+  spanning both public subnets, nginx running as an OS process — applied, then superseded by phase 3
+- [`phases/phase3-eks-nginx-hpa.md`](./phases/phase3-eks-nginx-hpa.md) — EKS cluster + node group,
+  nginx as a Pod (Deployment + Service + HPA), ALB routing to the node group via NodePort, applied
 
-Later phases (DynamoDB) get scoped and added here once phase 2 is solid — don't pre-write them now.
+Later phases (DynamoDB) get scoped and added here once phase 3 is solid — don't pre-write them now.
 
 Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md).
 
@@ -78,15 +89,17 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 
 ```
 ✓ Phase 0 — Preflight    PASSED (Floci path; real-AWS path still blocked on credentials)
-✓ Phase 1 — EC2 apply    PASSED in full (t3.small in 02's private subnet, applied against Floci,
-                         authorized 2026-07-25) — superseded by phase 2's ASG conversion
-✓ Phase 2 — ALB+ASG      PASSED in full: ASG + launch template + ALB (2 AZs) + target group +
-                         listener applied against Floci, authorized 2026-07-25. nginx running,
-                         target healthy, verified end-to-end within Floci's limits (see phase 2
-                         notes: Floci doesn't run user_data or proxy ALB traffic — both worked
-                         around for verification, both would just work on real AWS)
+✓ Phase 1 — EC2 apply    PASSED, then superseded by phase 3 (EKS)
+✓ Phase 2 — ALB+ASG      PASSED, then superseded by phase 3 (EKS) — see phase 2's superseded note
+✓ Phase 3 — EKS+nginx+HPA PASSED in full: EKS cluster + node group + IAM roles applied against
+                         Floci (a real k3s server, not just API mocking); nginx Deployment/Service/
+                         HPA applied via the Kubernetes provider, authorized 2026-07-25. Node Ready,
+                         Pod Running, HPA reporting live CPU metrics, HTTP 200 confirmed via the
+                         NodePort. Two Floci-specific gaps skipped for the Floci path only (cluster
+                         security group, node-group-ASG attachment) — see phase 3 notes.
 
-asg_name:           agentic-devops-lab-03-app-20260725165722293200000003  (Floci-emulated)
-alb_dns_name:        app-20260725170316887600000001-e7d0c4d1277748f5.elb.localhost.floci.io (Floci)
-target_group_arn:    tg-20260725165722275100000001  (Floci-emulated)
+eks_cluster_name:     agentic-devops-lab-03-eks       (Floci-emulated, not real AWS)
+eks_cluster_endpoint: https://localhost:6501          (Floci-emulated, not real AWS)
+node_group_name:      agentic-devops-lab-03-node      (Floci-emulated, not real AWS)
+alb_dns_name:         app-20260725170316887600000001-e7d0c4d1277748f5.elb.localhost.floci.io (Floci)
 ```

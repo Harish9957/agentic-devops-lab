@@ -1,8 +1,21 @@
 # Phase 2 — ALB + ASG
 
-## Status: APPLIED in full (against Floci) — plan reviewed and authorized 2026-07-25; nginx added
-and end-to-end reachability verified the same day, with two Floci-specific limitations documented
-below (not config defects — see Notes)
+## SUPERSEDED by phase 3 (2026-07-25, same day) — see phases/phase3-eks-nginx-hpa.md
+
+Kept as historical record, not deleted — see root `CLAUDE.md`'s writing standards ("if something
+turned out to be wrong or was abandoned, say so plainly rather than quietly deleting it"). The
+EC2/ASG/launch-template/`user_data` approach documented below was fully applied and working (within
+Floci's limits), but got replaced same-day once testing showed Floci's EKS support has dramatically
+better fidelity — a real k3s server container with a genuinely working API server and
+`metrics-server`, not just API-level mocking. That meant the two worst limitations here (`user_data`
+never executing, no real ALB data-plane) mostly went away for the compute layer, so the goal of
+"nginx as a Pod with an HPA" moved onto EKS instead of hand-rolling Kubernetes concepts on top of a
+bare EC2 instance. `asg.tf` was deleted; the EC2 security group, launch template, and ASG it held
+were destroyed as part of that switch.
+
+## Status (as it stood before being superseded): APPLIED in full (against Floci) — plan reviewed
+and authorized 2026-07-25; nginx added and end-to-end reachability verified the same day, with two
+Floci-specific limitations documented below (not config defects — see Notes)
 
 ## Goal
 

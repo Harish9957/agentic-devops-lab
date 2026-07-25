@@ -17,15 +17,9 @@ variable "use_floci" {
 }
 
 variable "instance_type" {
-  description = "EC2 instance type for the app-tier instance"
+  description = "EC2 instance type for the EKS node group's worker nodes"
   type        = string
   default     = "t3.small"
-}
-
-variable "ami_id" {
-  description = "AMI ID for the EC2 instance. Default is a recent Amazon Linux 2023 AMI in us-east-1 — override for other regions. Not validated against a real catalog during `plan` (only `apply` against real AWS checks it actually exists); Floci doesn't validate it at all."
-  type        = string
-  default     = "ami-0c101f26f147fa7fd"
 }
 
 variable "environment" {
@@ -35,25 +29,31 @@ variable "environment" {
 }
 
 variable "app_port" {
-  description = "Port the ALB listens on and forwards to the ASG-managed instances"
+  description = "Port the ALB listens on externally (what users hit)"
   type        = number
   default     = 80
 }
 
-variable "asg_min_size" {
-  description = "Minimum number of instances in the ASG"
+variable "node_port" {
+  description = "NodePort the nginx Kubernetes Service exposes on each EKS worker node. The ALB's target group forwards here, not to app_port directly — nginx runs as a Pod on the cluster, not a bare process on the host."
+  type        = number
+  default     = 30080
+}
+
+variable "node_group_min_size" {
+  description = "Minimum number of worker nodes in the EKS node group"
   type        = number
   default     = 1
 }
 
-variable "asg_max_size" {
-  description = "Maximum number of instances in the ASG"
+variable "node_group_max_size" {
+  description = "Maximum number of worker nodes in the EKS node group"
   type        = number
   default     = 2
 }
 
-variable "asg_desired_capacity" {
-  description = "Desired number of instances in the ASG"
+variable "node_group_desired_size" {
+  description = "Desired number of worker nodes in the EKS node group"
   type        = number
   default     = 1
 }

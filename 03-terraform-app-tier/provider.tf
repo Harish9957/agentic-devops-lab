@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.30"
+    }
   }
 
   # Backend config (bucket/key/table/endpoints) is supplied via -backend-config=backend.hcl —
@@ -27,6 +31,8 @@ provider "aws" {
       ec2         = "http://localhost:4566"
       elbv2       = "http://localhost:4566"
       autoscaling = "http://localhost:4566"
+      eks         = "http://localhost:4566"
+      iam         = "http://localhost:4566"
     }
   }
 }

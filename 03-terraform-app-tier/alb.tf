@@ -44,10 +44,19 @@ resource "aws_lb" "app" {
 
 resource "aws_lb_target_group" "app" {
   name_prefix = "tg-"
-  port        = var.app_port
+  port        = var.node_port
   protocol    = "HTTP"
   vpc_id      = data.terraform_remote_state.vpc.outputs.vpc_id
   target_type = "instance"
+  # Registered by aws_autoscaling_attachment.app (eks.tf), attached to the EKS node group's own
+  # managed ASG — not a hand-declared one.
+
+  # Port changes force replacement — without create_before_destroy, Terraform tries to destroy the
+  # old target group before the listener stops referencing it, which AWS rejects
+  # (ResourceInUse: "in use by a listener or rule"). Create-then-rewire-then-destroy avoids that.
+  lifecycle {
+    create_before_destroy = true
+  }
 
   health_check {
     path                = "/"
