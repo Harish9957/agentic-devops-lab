@@ -88,3 +88,19 @@ Verified locking actually functions, not just that the table exists: started a b
 `terraform plan` and polled `aws dynamodb scan` on the lock table — a lock item
 (`Operation: OperationTypePlan`) appeared mid-plan and was released after. Full details and the
 backend's own build/verification: `../terraform-state-backend/spec/phases/phase2-apply.md`.
+
+**Second public subnet added (2026-07-25, from `03-terraform-app-tier` phase 2):** while building an
+ALB in `03`, hit a real constraint — Application Load Balancers require subnets spanning at least 2
+Availability Zones, and this VPC only had one public subnet. Confirmed empirically, not just assumed
+from docs: `terraform apply` in `03` actually failed against Floci with
+`InvalidConfigurationRequest: Application Load Balancers must be attached to subnets in at least two
+Availability Zones` — Floci enforces this constraint just like real AWS, contrary to an earlier
+assumption that it wouldn't. Added `aws_subnet.public_b` (`us-east-1c`, `10.0.3.0/24`), sharing the
+existing public route table (`aws_route_table.public`) since both public subnets just need the same
+route to the Internet Gateway. Plan: 2 to add (`aws_subnet.public_b`,
+`aws_route_table_association.public_b`), 0 to change, 0 to destroy — purely additive, nothing
+existing touched. Applied against Floci after explicit go-ahead; independently verified via
+`aws ec2 describe-subnets --subnet-ids subnet-b8f49074` — `State: available`,
+`AvailabilityZone: us-east-1c`, `CidrBlock: 10.0.3.0/24`. New output `public_subnet_ids` (list of
+both) added for anything needing multi-AZ; `public_subnet_id` (singular) kept unchanged for existing
+consumers.
