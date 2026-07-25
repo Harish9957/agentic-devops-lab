@@ -45,6 +45,26 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+# Second public subnet, different AZ: ALBs require subnets spanning at least 2 Availability Zones —
+# a single public subnet can't satisfy that. Shares the same route table as the first public subnet;
+# both just need a route to the Internet Gateway.
+
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_b_cidr
+  availability_zone       = var.public_availability_zone_b
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "${var.name}-public-b"
+  }
+}
+
+resource "aws_route_table_association" "public_b" {
+  subnet_id      = aws_subnet.public_b.id
+  route_table_id = aws_route_table.public.id
+}
+
 # Private subnet: where compute resources (EC2, EKS nodes, etc.) actually go. The public subnet
 # above is only for internet-facing infra (this NAT gateway, load balancers, bastions) — never for
 # compute directly. See spec.md's non-negotiable rules.

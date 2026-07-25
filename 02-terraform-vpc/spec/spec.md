@@ -21,8 +21,10 @@ unless overriding one:
 | `vpc_cidr` | CIDR block for the VPC | `10.0.0.0/16` |
 | `public_subnet_cidr` | CIDR block for the public subnet | `10.0.1.0/24` |
 | `private_subnet_cidr` | CIDR block for the private subnet | `10.0.2.0/24` |
+| `public_subnet_b_cidr` | CIDR block for the second public subnet — ALBs require 2+ AZs, one public subnet can't satisfy that | `10.0.3.0/24` |
 | `public_availability_zone` | AZ for the public subnet | `us-east-1a` |
 | `private_availability_zone` | AZ for the private subnet — deliberately different, so it survives an AZ outage in the public subnet | `us-east-1b` |
+| `public_availability_zone_b` | AZ for the second public subnet — deliberately different from both the first public and the private subnet's AZs | `us-east-1c` |
 | `use_floci` | Target a local [Floci](https://floci.io/) emulator (`http://localhost:4566`) instead of real AWS | `false` |
 
 ## Outputs
@@ -34,7 +36,8 @@ instances, etc.) should consume these via `terraform_remote_state`, pointed at t
 | Output | What it is |
 |---|---|
 | `vpc_id` | ID of the created VPC |
-| `public_subnet_id` | ID of the public subnet — internet-facing infra only (NAT gateway, load balancers, bastions), never compute |
+| `public_subnet_id` | ID of the first public subnet — internet-facing infra only (NAT gateway, load balancers, bastions), never compute |
+| `public_subnet_ids` | IDs of both public subnets (2 AZs) — use this for anything needing multi-AZ, e.g. an ALB |
 | `private_subnet_id` | ID of the private subnet — where compute resources (EC2, EKS nodes, etc.) should actually be created |
 
 ## Non-Negotiable Rules
@@ -65,11 +68,13 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 
 ```
 ✓ Phase 0 — Preflight              PASSED (Floci path; real-AWS path still blocked on credentials)
-✓ Phase 1 — Plan reviewed          PASSED (base VPC + private-subnet/NAT extension, both against Floci)
-✓ Phase 2 — Apply                  PASSED in full (base VPC + private subnet/NAT, both authorized
-                                    separately, both against Floci, 2026-07-25)
+✓ Phase 1 — Plan reviewed          PASSED (base VPC + private-subnet/NAT extension + 2nd public
+                                    subnet extension, all against Floci)
+✓ Phase 2 — Apply                  PASSED in full (base VPC + private subnet/NAT + 2nd public
+                                    subnet, each authorized separately, all against Floci, 2026-07-25)
 
-vpc_id:            vpc-e705db27      (Floci-emulated, not real AWS)
-public_subnet_id:  subnet-d7a7dd89   (Floci-emulated, not real AWS)
-private_subnet_id: subnet-9f7fb509   (Floci-emulated, not real AWS)
+vpc_id:             vpc-e705db27      (Floci-emulated, not real AWS)
+public_subnet_id:   subnet-d7a7dd89   (Floci-emulated, not real AWS)
+public_subnet_b_id: subnet-b8f49074   (Floci-emulated, not real AWS — us-east-1c, 10.0.3.0/24)
+private_subnet_id:  subnet-9f7fb509   (Floci-emulated, not real AWS)
 ```
