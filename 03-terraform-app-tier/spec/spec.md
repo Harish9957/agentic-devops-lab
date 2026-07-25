@@ -66,6 +66,9 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 
 ```
 ✓ Phase 0 — Preflight    PASSED (Floci path; real-AWS path still blocked on credentials)
-✓ Phase 1 — EC2 plan     PASSED (t3.small in 02's private subnet, reviewed plan, Floci) —
-                         apply still blocked pending explicit go-ahead
+✓ Phase 1 — EC2 apply    PASSED in full (t3.small in 02's private subnet, applied against Floci,
+                         authorized 2026-07-25)
+
+ec2_instance_id: i-ca49a33bc2265a490  (Floci-emulated, not real AWS)
+ec2_private_ip:  172.17.0.4           (Floci-emulated, not real AWS)
 ```

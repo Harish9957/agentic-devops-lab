@@ -1,5 +1,7 @@
 # Phase 1 — EC2 in the private subnet
 
+## Status: APPLIED (against Floci) — plan reviewed and authorized 2026-07-25
+
 ## Goal
 
 Write the Terraform code for an EC2 instance placed in `02-terraform-vpc`'s private subnet
@@ -32,7 +34,10 @@ Phase 0 (terraform + AWS/Floci credentials confirmed; `02`'s remote state confir
 - [x] Plan confirms the instance lands in `subnet-9f7fb509` (`02`'s `private_subnet_id`), not the
       public subnet — read directly from plan output, not assumed
 - [x] Plan output has been read and shared, not just run
-- [ ] `terraform apply` — **blocked pending explicit go-ahead**, not yet run
+- [x] User explicitly authorized this apply (2026-07-25, "go ahead")
+- [x] `terraform apply` completed: 2 added, 0 changed, 0 destroyed
+- [x] Independently confirmed via `aws ec2 describe-instances` against the Floci endpoint — not just
+      Terraform's own report
 
 ## Notes / decisions
 
@@ -47,5 +52,24 @@ by making each attribute independently conditional (`var.use_floci ? "test" : nu
 remote state correctly resolved `02`'s `private_subnet_id`), no `associate_public_ip_address` set
 (private subnet doesn't assign one). `aws_security_group.ec2` — egress-only (`0.0.0.0/0`), no
 ingress rules yet; will be opened up to the ALB's security group specifically once that phase adds
-one, rather than opening to a wide CIDR now. Saved to `tfplan` — not yet applied, needs a separate
-explicit go-ahead per this use case's non-negotiable rules.
+one, rather than opening to a wide CIDR now. Saved to `tfplan`.
+
+**Applied (same day, separate explicit go-ahead — "go ahead"):** ran `terraform apply tfplan`
+against Floci. 2 resources created:
+
+- `aws_security_group.ec2` → `sg-cdb148c02b69f89a7`
+- `aws_instance.app` → `i-ca49a33bc2265a490`
+
+Outputs: `ec2_instance_id = "i-ca49a33bc2265a490"`, `ec2_private_ip = "172.17.0.4"`.
+
+Independently verified via `aws ec2 describe-instances --instance-ids i-ca49a33bc2265a490
+--endpoint-url http://localhost:4566` (test credentials, not just trusting Terraform's own "apply
+complete" message): `State: running`, `InstanceType: t3.small`, `SubnetId: subnet-9f7fb509` (`02`'s
+actual private subnet). Floci also reports `PublicIp: 127.0.0.1` — this is an artifact of Floci
+emulating EC2 instances as local Docker containers (per `02-terraform-vpc`'s own phase 0 notes), not
+a real public IP; `associate_public_ip_address` isn't set on the resource and the private subnet
+doesn't assign one, so this isn't actually internet-facing.
+
+This state is local-only (Floci container, remote state in Floci's emulated S3) — doesn't touch real
+AWS and isn't billable. Teardown (see `../teardown.md`) still requires its own explicit go-ahead
+before `terraform destroy`.
