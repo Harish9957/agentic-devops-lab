@@ -96,3 +96,15 @@ OK` on the instance's private IP (`172.17.0.4:80`) from inside Floci's own Docke
 target group correctly reporting that instance healthy — i.e., every piece of AWS-side wiring
 (security groups, target registration, health checks) is correct and would carry real traffic
 end-to-end on real AWS; only Floci's own proxy is missing.
+
+**Floci limitation #3 — the instance's bridge IP isn't reachable from the host at all, on this
+machine.** This runs under Docker Desktop on macOS (confirmed via `docker context ls` /
+`docker info`): Docker Desktop puts containers inside a Linux VM, and the Mac host has no route to
+the internal bridge network (`172.17.0.0/16`) — only explicitly published ports reach the host.
+`docker port floci-ec2-i-58e312ea4983f2249` shows only `22/tcp -> 2200`, nothing for port 80. So
+`curl http://172.17.0.4:80/` **fails from a normal host terminal** — confirmed when re-tested from
+one — and would fail regardless of whether nginx is running. The only successful verification
+(`200 OK`) was `docker exec floci curl http://172.17.0.4:80/`, run *inside* the `floci` container
+itself, which sits on that same internal bridge network and can reach other containers by IP
+directly. Anyone re-verifying this later needs to use that same `docker exec` approach, or the
+target-group health-check API — not a plain host-terminal `curl`.
