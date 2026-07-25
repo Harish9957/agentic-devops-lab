@@ -27,3 +27,9 @@ variable "ami_id" {
   type        = string
   default     = "ami-0c101f26f147fa7fd"
 }
+
+variable "environment" {
+  description = "Environment tag applied to all resources (env = ...)"
+  type        = string
+  default     = "dev"
+}

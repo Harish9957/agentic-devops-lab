@@ -16,6 +16,7 @@ resource "aws_security_group" "ec2" {
 
   tags = {
     Name = "${var.name}-ec2"
+    env  = var.environment
   }
 }
 
@@ -27,5 +28,6 @@ resource "aws_instance" "app" {
 
   tags = {
     Name = "${var.name}-ec2"
+    env  = var.environment
   }
 }

@@ -73,3 +73,9 @@ doesn't assign one, so this isn't actually internet-facing.
 This state is local-only (Floci container, remote state in Floci's emulated S3) — doesn't touch real
 AWS and isn't billable. Teardown (see `../teardown.md`) still requires its own explicit go-ahead
 before `terraform destroy`.
+
+**Tags added (same day, separate explicit go-ahead — "yes"):** added `var.environment` (default
+`"dev"`) and an `env` tag to both `aws_instance.app` and `aws_security_group.ec2`. Plan showed a
+clean in-place update (0 to add, 2 to change, 0 to destroy) — only the `tags`/`tags_all` maps
+changed, nothing else. Applied against Floci; independently confirmed via `aws ec2 describe-tags
+--filters "Name=resource-id,Values=i-ca49a33bc2265a490"`, showing both `Name` and `env=dev`.
