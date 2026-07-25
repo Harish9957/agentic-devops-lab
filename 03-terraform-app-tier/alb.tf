@@ -1,11 +1,9 @@
 # ALB is internet-facing infra — belongs in the public subnet, never alongside compute (same
 # public-vs-private split 02-terraform-vpc established for its own NAT gateway).
 #
-# KNOWN GAP: 02-terraform-vpc currently exposes only ONE public subnet (single AZ, us-east-1a).
-# Real AWS requires an ALB's subnets to span at least two distinct Availability Zones — creation
-# will fail against real AWS with only one. This plans/applies fine against Floci (which doesn't
-# enforce the constraint), so that's the only target this phase is verified against. Called out
-# explicitly rather than silently working around it — see spec.md and phase2 notes.
+# Spans both of 02-terraform-vpc's public subnets (2 AZs) — ALBs require at least 2 Availability
+# Zones; Floci enforces this too (confirmed empirically when a single-subnet apply failed), not
+# just real AWS. See 02-terraform-vpc's phase2-apply.md notes for how the second subnet got added.
 
 resource "aws_security_group" "alb" {
   name_prefix = "${var.name}-alb-"
@@ -36,7 +34,7 @@ resource "aws_lb" "app" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = [data.terraform_remote_state.vpc.outputs.public_subnet_id]
+  subnets            = data.terraform_remote_state.vpc.outputs.public_subnet_ids
 
   tags = {
     Name = "${var.name}-alb"

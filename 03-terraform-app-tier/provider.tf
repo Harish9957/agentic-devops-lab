@@ -24,7 +24,9 @@ provider "aws" {
   dynamic "endpoints" {
     for_each = var.use_floci ? [1] : []
     content {
-      ec2 = "http://localhost:4566"
+      ec2         = "http://localhost:4566"
+      elbv2       = "http://localhost:4566"
+      autoscaling = "http://localhost:4566"
     }
   }
 }

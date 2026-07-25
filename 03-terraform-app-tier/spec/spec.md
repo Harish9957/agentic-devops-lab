@@ -51,10 +51,16 @@ Added per-phase as resources are created. Anticipated, not yet real:
    (internet-facing by nature) uses `public_subnet_id`. DynamoDB is a regional service, not
    VPC-attached, so this rule doesn't apply to it directly — but nothing else this use case adds
    should end up in the public subnet.
-7. **Known gap, documented rather than silently worked around**: `02-terraform-vpc` has only one
-   public subnet (single AZ), but real AWS requires an ALB's subnets to span at least two AZs. Phase
-   2 is verified against Floci only (which doesn't enforce this) — real-AWS apply needs `02`
-   extended with a second public subnet first. See `phases/phase2-alb-asg.md`.
+7. **ALB needs 2+ AZs — resolved, not just documented**: `02-terraform-vpc` originally had only one
+   public subnet. Confirmed empirically (not just from docs) that even Floci enforces AWS's 2-AZ
+   requirement for ALBs — a single-subnet apply genuinely failed. Fixed by adding a second public
+   subnet to `02` (`us-east-1c`) — see `02-terraform-vpc/spec/phases/phase2-apply.md` and this use
+   case's `phases/phase2-alb-asg.md`.
+8. **Floci is a control-plane emulator for ALB/EC2, not a full data-plane one**: `user_data` never
+   executes (each instance is a bare container), and the ALB's DNS name doesn't actually proxy
+   traffic. Both are Floci-specific limitations, not defects in this use case's Terraform — see
+   `phases/phase2-alb-asg.md` Notes for how reachability was verified within what Floci actually
+   supports, and what would differ on real AWS.
 
 ## Phases
 
@@ -62,7 +68,7 @@ Added per-phase as resources are created. Anticipated, not yet real:
   credentials, confirm `02`'s remote state is actually readable from here
 - [`phases/phase1-ec2.md`](./phases/phase1-ec2.md) — EC2 instance in the private subnet, applied
 - [`phases/phase2-alb-asg.md`](./phases/phase2-alb-asg.md) — EC2 converted to ASG management, ALB
-  in the public subnet routing to it, reviewed plan (no apply)
+  spanning both public subnets routing to it, nginx running, applied
 
 Later phases (DynamoDB) get scoped and added here once phase 2 is solid — don't pre-write them now.
 
@@ -74,6 +80,13 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 ✓ Phase 0 — Preflight    PASSED (Floci path; real-AWS path still blocked on credentials)
 ✓ Phase 1 — EC2 apply    PASSED in full (t3.small in 02's private subnet, applied against Floci,
                          authorized 2026-07-25) — superseded by phase 2's ASG conversion
-✓ Phase 2 — ALB+ASG plan PASSED (reviewed plan against Floci: 6 add / 1 change / 1 destroy) —
-                         apply still blocked pending explicit go-ahead
+✓ Phase 2 — ALB+ASG      PASSED in full: ASG + launch template + ALB (2 AZs) + target group +
+                         listener applied against Floci, authorized 2026-07-25. nginx running,
+                         target healthy, verified end-to-end within Floci's limits (see phase 2
+                         notes: Floci doesn't run user_data or proxy ALB traffic — both worked
+                         around for verification, both would just work on real AWS)
+
+asg_name:           agentic-devops-lab-03-app-20260725165722293200000003  (Floci-emulated)
+alb_dns_name:        app-20260725170316887600000001-e7d0c4d1277748f5.elb.localhost.floci.io (Floci)
+target_group_arn:    tg-20260725165722275100000001  (Floci-emulated)
 ```

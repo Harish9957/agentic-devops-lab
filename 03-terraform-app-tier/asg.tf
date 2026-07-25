@@ -1,6 +1,18 @@
 # Compute goes in the private subnet, never the public one — design rule inherited from
 # 02-terraform-vpc, see spec/phases/phase0-preflight.md.
 
+locals {
+  # Amazon Linux 2023 uses dnf, Amazon Linux 2 uses yum — try dnf first, fall back to yum, so this
+  # works regardless of which Amazon Linux generation var.ami_id actually resolves to.
+  nginx_user_data = <<-EOF
+    #!/bin/bash
+    set -e
+    (dnf install -y nginx || yum install -y nginx)
+    systemctl enable nginx
+    systemctl start nginx
+    EOF
+}
+
 resource "aws_security_group" "ec2" {
   name_prefix = "${var.name}-ec2-"
   vpc_id      = data.terraform_remote_state.vpc.outputs.vpc_id
@@ -30,6 +42,7 @@ resource "aws_launch_template" "app" {
   name_prefix   = "${var.name}-app-"
   image_id      = var.ami_id
   instance_type = var.instance_type
+  user_data     = base64encode(local.nginx_user_data)
 
   vpc_security_group_ids = [aws_security_group.ec2.id]
 
