@@ -65,6 +65,7 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 ## Completion Promise
 
 ```
-Phase 0 — Preflight    NOT STARTED
-Phase 1 — EC2 plan     NOT STARTED
+✓ Phase 0 — Preflight    PASSED (Floci path; real-AWS path still blocked on credentials)
+✓ Phase 1 — EC2 plan     PASSED (t3.small in 02's private subnet, reviewed plan, Floci) —
+                         apply still blocked pending explicit go-ahead
 ```

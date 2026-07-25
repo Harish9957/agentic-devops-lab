@@ -26,11 +26,26 @@ Phase 0 (terraform + AWS/Floci credentials confirmed; `02`'s remote state confir
 
 ## Completion gate
 
-- [ ] `terraform validate` exits 0
-- [ ] `terraform plan` shows the EC2 instance (and its security group, if new) landing in
-      `private_subnet_id`, not `public_subnet_id` — confirmed by reading the plan output, not assumed
-- [ ] Plan output has been read and shared, not just run
+- [x] `terraform validate` exits 0
+- [x] `terraform plan -var="use_floci=true"` shows exactly 2 resources to add
+      (`aws_security_group.ec2`, `aws_instance.app`), 0 to change, 0 to destroy
+- [x] Plan confirms the instance lands in `subnet-9f7fb509` (`02`'s `private_subnet_id`), not the
+      public subnet — read directly from plan output, not assumed
+- [x] Plan output has been read and shared, not just run
+- [ ] `terraform apply` — **blocked pending explicit go-ahead**, not yet run
 
 ## Notes / decisions
 
-(Not started.)
+2026-07-25: `data "terraform_remote_state" "vpc"` initially failed `terraform validate` —
+"Inconsistent conditional result types" — because the Floci/non-Floci branches of the `config`
+ternary had different object attribute sets (Floci branch had extra keys like `access_key`). Fixed
+by making each attribute independently conditional (`var.use_floci ? "test" : null`, matching
+`provider.tf`'s own pattern) instead of two differently-shaped objects. Validated cleanly after.
+
+`terraform plan -var="use_floci=true"` against Floci: 2 to add, 0 to change, 0 to destroy.
+`aws_instance.app` — `t3.small`, `ami-0c101f26f147fa7fd`, `subnet_id = "subnet-9f7fb509"` (confirms
+remote state correctly resolved `02`'s `private_subnet_id`), no `associate_public_ip_address` set
+(private subnet doesn't assign one). `aws_security_group.ec2` — egress-only (`0.0.0.0/0`), no
+ingress rules yet; will be opened up to the ALB's security group specifically once that phase adds
+one, rather than opening to a wide CIDR now. Saved to `tfplan` — not yet applied, needs a separate
+explicit go-ahead per this use case's non-negotiable rules.

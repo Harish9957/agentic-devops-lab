@@ -32,11 +32,20 @@ not subnet-attached.
 
 ## Completion gate
 
-- [ ] `terraform version` prints a version
-- [ ] `aws sts get-caller-identity` succeeds against real AWS, **or** Floci path confirmed working
-- [ ] `terraform_remote_state` data source successfully reads `02`'s `vpc_id`,
-      `public_subnet_id`, `private_subnet_id`
+- [x] `terraform version` prints a version (v1.15.1)
+- [ ] `aws sts get-caller-identity` succeeds against real AWS — still blocked, no credentials on
+      this machine (same as `02-terraform-vpc` phase 0)
+- [x] Floci path confirmed working: `floci` container up and healthy at `http://localhost:4566`
+- [x] `terraform_remote_state` data source successfully reads `02`'s `vpc_id` (`vpc-e705db27`) and
+      `private_subnet_id` (`subnet-9f7fb509`) — confirmed via phase 1's plan output, which resolved
+      both correctly from `02`'s remote state
 
 ## Notes / decisions
 
-(Fill in once run.)
+Checked 2026-07-25: `aws sts get-caller-identity` fails with `NoCredentials`, identical to `02`'s
+phase 0 finding — real-AWS path stays blocked until credentials are configured. Floci confirmed
+already running (`floci` container healthy, 200 response from `http://localhost:4566`), so proceeded
+on the Floci path, same choice `02` made. The `terraform_remote_state` check was folded into phase
+1's plan run rather than a separate throwaway config — the plan output resolving `subnet_id` and
+`vpc_id` to `02`'s actual applied values is direct proof the data source works, no need for a
+separate test.
