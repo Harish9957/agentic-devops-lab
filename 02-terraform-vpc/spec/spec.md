@@ -2,11 +2,12 @@
 
 ## Goal
 
-Use Terraform to create a minimal AWS VPC by hand: one VPC, one public subnet, an Internet Gateway,
-and a route table wiring the subnet to the internet (5 resources total). This is the lab's first
-Terraform use case, built without an installed Terraform "skill"/plugin on purpose — the point is
-learning the fundamentals (provider config, resource dependencies, plan vs. apply, state) alongside
-building, not getting a correct-looking result from baked-in conventions.
+Use Terraform to create a minimal-but-correct AWS VPC by hand: a public subnet (internet-facing infra
+only) and a private subnet (where compute actually goes), each wired to the internet appropriately —
+public via Internet Gateway, private via NAT Gateway. This is the lab's first Terraform use case,
+built without an installed Terraform "skill"/plugin on purpose — the point is learning the
+fundamentals (provider config, resource dependencies, plan vs. apply, state) alongside building, not
+getting a correct-looking result from baked-in conventions.
 
 ## Inputs
 
@@ -19,7 +20,9 @@ unless overriding one:
 | `name` | Name prefix applied to all resources | `agentic-devops-lab-02` |
 | `vpc_cidr` | CIDR block for the VPC | `10.0.0.0/16` |
 | `public_subnet_cidr` | CIDR block for the public subnet | `10.0.1.0/24` |
-| `availability_zone` | AZ for the public subnet | `us-east-1a` |
+| `private_subnet_cidr` | CIDR block for the private subnet | `10.0.2.0/24` |
+| `public_availability_zone` | AZ for the public subnet | `us-east-1a` |
+| `private_availability_zone` | AZ for the private subnet — deliberately different, so it survives an AZ outage in the public subnet | `us-east-1b` |
 | `use_floci` | Target a local [Floci](https://floci.io/) emulator (`http://localhost:4566`) instead of real AWS | `false` |
 
 ## Outputs
@@ -31,7 +34,8 @@ or passed in explicitly for now — rather than hardcoding IDs:
 | Output | What it is |
 |---|---|
 | `vpc_id` | ID of the created VPC |
-| `public_subnet_id` | ID of the public subnet |
+| `public_subnet_id` | ID of the public subnet — internet-facing infra only (NAT gateway, load balancers, bastions), never compute |
+| `private_subnet_id` | ID of the private subnet — where compute resources (EC2, EKS nodes, etc.) should actually be created |
 
 ## Non-Negotiable Rules
 
@@ -59,9 +63,11 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 
 ```
 ✓ Phase 0 — Preflight              PASSED (Floci path; real-AWS path still blocked on credentials)
-✓ Phase 1 — Plan reviewed          PASSED (against Floci — 5 to add, 0 to change, 0 to destroy)
-✓ Phase 2 — Apply                  PASSED (against Floci, authorized 2026-07-25)
+✓ Phase 1 — Plan reviewed          PASSED (base VPC + private-subnet/NAT extension, both against Floci)
+⧗ Phase 2 — Apply                  Base VPC PASSED (2026-07-25). Private subnet + NAT Gateway
+                                    PLANNED, BLOCKED on your explicit go-ahead for this specific run.
 
 vpc_id:            vpc-e705db27      (Floci-emulated, not real AWS)
 public_subnet_id:  subnet-d7a7dd89   (Floci-emulated, not real AWS)
+private_subnet_id: (populated once the private-subnet/NAT apply is authorized and run)
 ```

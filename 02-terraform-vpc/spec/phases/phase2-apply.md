@@ -3,17 +3,21 @@
 ## Goal
 
 Actually create the VPC, subnet, Internet Gateway, and route table in AWS, from the plan reviewed
-in phase 1.
+in phase 1. Extended same-day to add a private subnet + NAT Gateway, per the design rule added to
+phase 0 (compute belongs in private subnets, never the public one).
 
 ## Builds on
 
 Phase 1 (plan reviewed, `tfplan` file exists and matches what was shown).
 
-## Status: APPLIED (against Floci)
+## Status: base VPC APPLIED (against Floci); private-subnet/NAT extension PLANNED, BLOCKED
 
-Authorized 2026-07-25 ("yes go ahead"), applied against the local Floci emulator (`use_floci=true`),
-not real AWS. The real-AWS path is still blocked separately on phase 0's credentials gate — this
-completion is scoped to Floci only.
+Base 5-resource VPC authorized 2026-07-25 ("yes go ahead"), applied against the local Floci emulator
+(`use_floci=true`), not real AWS. The private subnet + NAT Gateway addition (5 more resources) has a
+reviewed plan (see phase 1 notes) but has **not** been applied — same apply-needs-explicit-go-ahead
+rule applies to this run as its own separate authorization, not covered by the earlier go-ahead. The
+real-AWS path is still blocked separately on phase 0's credentials gate — all of this is scoped to
+Floci only.
 
 ## Steps (as run)
 
@@ -21,13 +25,20 @@ completion is scoped to Floci only.
 2. `aws ec2 describe-vpcs --vpc-ids <output.vpc_id>` against the Floci endpoint to confirm state
    independently of Terraform's own report
 
-## Completion gate
+## Completion gate — base VPC (5 resources)
 
 - [x] User explicitly authorized this apply (2026-07-25, "yes go ahead", in response to the
       Floci-plan summary — this run only, per the repo-wide gate rule)
 - [x] `terraform apply` completed: 5 added, 0 changed, 0 destroyed
 - [x] `aws ec2 describe-vpcs` shows the VPC in `available` state (confirmed independently, not just
       Terraform's own output)
+
+## Completion gate — private subnet + NAT Gateway (5 more resources)
+
+- [ ] User explicitly authorized this apply (not yet given — plan reviewed and saved to `tfplan`,
+      waiting on a separate explicit go-ahead for this specific run)
+- [ ] `terraform apply` completed: 5 added, 0 changed, 0 destroyed
+- [ ] `aws ec2 describe-subnets` shows the private subnet in `available` state, in AZ `us-east-1b`
 
 ## Notes / decisions
 

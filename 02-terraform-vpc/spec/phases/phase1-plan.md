@@ -41,3 +41,13 @@ exactly the 5 expected resources, 0 to change, 0 to destroy, saved to `tfplan`. 
 phase 2 would apply if/when authorized for the Floci path. Note `tfplan` is gitignored and specific
 to whichever backend (`use_floci` true/false) it was generated against — regenerate before applying
 if the toggle changes.
+
+2026-07-25 (later same day): after phase 2 applied the original 5-resource VPC, added a private
+subnet + NAT Gateway per the design rule in phase 0 (compute belongs in private subnets, never the
+public one). Re-ran `terraform plan -var="use_floci=true"` against the now-live state — refreshed the
+5 already-applied resources cleanly and showed exactly 5 *new* resources to add: `aws_subnet.private`
+(AZ `us-east-1b`, deliberately different from the public subnet's `us-east-1a`), `aws_eip.nat`,
+`aws_nat_gateway.main`, `aws_route_table.private`, `aws_route_table_association.private`. 0 to
+change, 0 to destroy. This confirms Floci also supports EIP + NAT Gateway, not just the base VPC
+primitives — verified empirically, not assumed. Saved to `tfplan`, not yet applied — same
+apply-needs-explicit-go-ahead rule applies to this run as to any other.

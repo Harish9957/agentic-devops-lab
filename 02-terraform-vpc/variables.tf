@@ -22,10 +22,22 @@ variable "public_subnet_cidr" {
   default     = "10.0.1.0/24"
 }
 
-variable "availability_zone" {
+variable "private_subnet_cidr" {
+  description = "CIDR block for the private subnet — where compute resources (EC2, etc.) actually go"
+  type        = string
+  default     = "10.0.2.0/24"
+}
+
+variable "public_availability_zone" {
   description = "Availability zone for the public subnet"
   type        = string
   default     = "us-east-1a"
+}
+
+variable "private_availability_zone" {
+  description = "Availability zone for the private subnet — deliberately different from the public subnet's AZ, so the private subnet survives an outage in the public subnet's AZ"
+  type        = string
+  default     = "us-east-1b"
 }
 
 variable "use_floci" {

@@ -18,6 +18,16 @@ Nothing — first phase of this use case.
   faster path for iterating on this use case without needing real AWS credentials or spending money;
   real AWS remains the default (`use_floci = false`) for whenever credentials are configured.
 
+## Design rule (non-negotiable, applies to every phase in this use case)
+
+**Compute resources (EC2, EKS nodes, RDS, etc.) always go in a private subnet. The public subnet is
+reserved for internet-facing infra only — NAT gateway, load balancers, bastion hosts.** Never place
+compute directly in the public subnet just because it's simpler to reach. This is why the VPC has
+both a public subnet (`aws_subnet.public`, routed to an Internet Gateway) and a private subnet
+(`aws_subnet.private`, routed to a NAT Gateway that sits in the public subnet) — any future use case
+that needs to launch compute against this VPC must consume `private_subnet_id`, not
+`public_subnet_id`, from this use case's outputs.
+
 ## Completion gate
 
 - [x] `terraform version` prints a version (v1.15.1 — a newer 1.15.8 is available but not required)
@@ -25,6 +35,8 @@ Nothing — first phase of this use case.
       credentials not configured on this machine)
 - [x] Floci path confirmed working: `floci start` brings up the emulator at `http://localhost:4566`;
       `terraform plan -var="use_floci=true"` succeeds (see phase 1 notes)
+- [x] Design rule satisfied: VPC has a dedicated private subnet, separate from the public subnet
+      (see phase 1 notes for the resources added)
 
 ## Notes / decisions
 
@@ -44,3 +56,10 @@ as real Docker containers) — verified empirically instead of assuming: `terraf
 -var="use_floci=true"` against Floci produces exactly the expected 5-resource plan (`aws_vpc`,
 `aws_subnet`, `aws_internet_gateway`, `aws_route_table`, `aws_route_table_association`), so VPC-family
 resources are in fact supported.
+
+Checked 2026-07-25 (later same day): the original design only had a public subnet — every resource,
+including future compute, would have landed there directly. That's wrong for anything beyond a
+throwaway demo: added a private subnet + NAT Gateway (`aws_eip.nat`, `aws_nat_gateway.main`,
+`aws_route_table.private`, `aws_route_table_association.private`) and turned "compute goes in
+private, not public" into the standing design rule above rather than a one-off fix. See phase 1
+notes for the plan verification of these additional resources.
