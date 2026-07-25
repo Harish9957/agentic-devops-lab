@@ -33,3 +33,27 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "app_port" {
+  description = "Port the ALB listens on and forwards to the ASG-managed instances"
+  type        = number
+  default     = 80
+}
+
+variable "asg_min_size" {
+  description = "Minimum number of instances in the ASG"
+  type        = number
+  default     = 1
+}
+
+variable "asg_max_size" {
+  description = "Maximum number of instances in the ASG"
+  type        = number
+  default     = 2
+}
+
+variable "asg_desired_capacity" {
+  description = "Desired number of instances in the ASG"
+  type        = number
+  default     = 1
+}

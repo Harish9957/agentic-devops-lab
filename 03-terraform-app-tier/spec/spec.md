@@ -23,9 +23,11 @@ Added per-phase as resources are created. Anticipated, not yet real:
 
 | Output | What it is |
 |---|---|
-| `ec2_instance_id` | ID of the EC2 instance in the private subnet |
+| `asg_name` | Name of the Auto Scaling Group managing the app-tier instances |
+| `launch_template_id` | ID of the launch template the ASG uses |
 | `alb_dns_name` | Public DNS name of the Application Load Balancer |
-| `dynamodb_table_name` | Name of the DynamoDB table |
+| `target_group_arn` | ARN of the ALB target group the ASG registers instances into |
+| `dynamodb_table_name` | Name of the DynamoDB table (not yet built) |
 
 ## Non-Negotiable Rules
 
@@ -45,20 +47,24 @@ Added per-phase as resources are created. Anticipated, not yet real:
    source reading `02-terraform-vpc`'s state, exactly as `02`'s own spec anticipated for any later
    use case needing its VPC.
 6. **Design rule inherited from `02`, still non-negotiable here**: compute goes in the private
-   subnet, never the public one. The EC2 instance uses `private_subnet_id`; only the ALB itself
+   subnet, never the public one. The ASG's instances use `private_subnet_id`; only the ALB itself
    (internet-facing by nature) uses `public_subnet_id`. DynamoDB is a regional service, not
    VPC-attached, so this rule doesn't apply to it directly — but nothing else this use case adds
    should end up in the public subnet.
+7. **Known gap, documented rather than silently worked around**: `02-terraform-vpc` has only one
+   public subnet (single AZ), but real AWS requires an ALB's subnets to span at least two AZs. Phase
+   2 is verified against Floci only (which doesn't enforce this) — real-AWS apply needs `02`
+   extended with a second public subnet first. See `phases/phase2-alb-asg.md`.
 
 ## Phases
 
 - [`phases/phase0-preflight.md`](./phases/phase0-preflight.md) — confirm terraform + AWS/Floci
   credentials, confirm `02`'s remote state is actually readable from here
-- [`phases/phase1-ec2.md`](./phases/phase1-ec2.md) — EC2 instance in the private subnet, reviewed
-  plan (no apply)
+- [`phases/phase1-ec2.md`](./phases/phase1-ec2.md) — EC2 instance in the private subnet, applied
+- [`phases/phase2-alb-asg.md`](./phases/phase2-alb-asg.md) — EC2 converted to ASG management, ALB
+  in the public subnet routing to it, reviewed plan (no apply)
 
-Later phases (ALB, DynamoDB) get scoped and added here once phase 1 is solid — don't pre-write them
-now.
+Later phases (DynamoDB) get scoped and added here once phase 2 is solid — don't pre-write them now.
 
 Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md).
 
@@ -67,8 +73,7 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 ```
 ✓ Phase 0 — Preflight    PASSED (Floci path; real-AWS path still blocked on credentials)
 ✓ Phase 1 — EC2 apply    PASSED in full (t3.small in 02's private subnet, applied against Floci,
-                         authorized 2026-07-25)
-
-ec2_instance_id: i-ca49a33bc2265a490  (Floci-emulated, not real AWS)
-ec2_private_ip:  172.17.0.4           (Floci-emulated, not real AWS)
+                         authorized 2026-07-25) — superseded by phase 2's ASG conversion
+✓ Phase 2 — ALB+ASG plan PASSED (reviewed plan against Floci: 6 add / 1 change / 1 destroy) —
+                         apply still blocked pending explicit go-ahead
 ```
