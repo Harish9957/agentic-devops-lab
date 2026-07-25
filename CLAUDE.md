@@ -20,8 +20,10 @@ to roughly two dozen over time. Conventions:
   its own manifests/scripts/tests. Nothing outside a use case's own directory should need to change
   when that use case's internals change.
 - Shared, cross-use-case things stay at repo root: this `CLAUDE.md`, `requirements.txt`, the shared
-  `.venv/`, and `.env` (credentials — Anthropic API key, etc. — reused across use cases rather than
-  duplicated per directory).
+  `.venv/`, `.env` (credentials — Anthropic API key, etc. — reused across use cases rather than
+  duplicated per directory), and `terraform-state-backend/` (shared S3+DynamoDB state backend for
+  every Terraform use case — unnumbered, since it's infrastructure other use cases depend on rather
+  than a use case with its own forward-building narrative, same reasoning as `teardown.md` below).
 - Only scope and write the next use case once the current one is solid. Don't pre-create empty
   numbered folders for use cases that haven't been designed yet.
 
@@ -30,7 +32,9 @@ to roughly two dozen over time. Conventions:
 | # | Directory | What it is |
 |---|-----------|------------|
 | 01 | [`01-kind-nginx/`](./01-kind-nginx/) | Claude (`agent.py`) drives a kind cluster from scratch and deploys nginx onto it, phase by phase |
-| 02 | [`02-terraform-vpc/`](./02-terraform-vpc/) | Minimal AWS VPC (VPC + public subnet + IGW + route table) written by hand in Terraform, no installed Terraform skill/plugin — first real-cloud use case |
+| 02 | [`02-terraform-vpc/`](./02-terraform-vpc/) | AWS VPC (public + private subnet, IGW, NAT gateway, route tables) written by hand in Terraform, no installed Terraform skill/plugin — first real-cloud use case |
+
+Shared infra (not numbered — see "Repo structure" above): [`terraform-state-backend/`](./terraform-state-backend/), a S3+DynamoDB Terraform state backend used by `02` and every later Terraform use case.
 
 ## Commands
 
