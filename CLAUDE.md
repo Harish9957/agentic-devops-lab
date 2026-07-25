@@ -33,6 +33,7 @@ to roughly two dozen over time. Conventions:
 |---|-----------|------------|
 | 01 | [`01-kind-nginx/`](./01-kind-nginx/) | Claude (`agent.py`) drives a kind cluster from scratch and deploys nginx onto it, phase by phase |
 | 02 | [`02-terraform-vpc/`](./02-terraform-vpc/) | AWS VPC (public + private subnet, IGW, NAT gateway, route tables) written by hand in Terraform, no installed Terraform skill/plugin — first real-cloud use case |
+| 03 | [`03-terraform-app/`](./03-terraform-app/) | App-tier resources on top of `02`'s VPC — EC2 in the private subnet, ALB, DynamoDB — consumed via `terraform_remote_state`, one cohesive use case rather than a folder per resource |
 
 Shared infra (not numbered — see "Repo structure" above): [`terraform-state-backend/`](./terraform-state-backend/), a S3+DynamoDB Terraform state backend used by `02` and every later Terraform use case.
 
