@@ -64,10 +64,10 @@ Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md
 ```
 ✓ Phase 0 — Preflight              PASSED (Floci path; real-AWS path still blocked on credentials)
 ✓ Phase 1 — Plan reviewed          PASSED (base VPC + private-subnet/NAT extension, both against Floci)
-⧗ Phase 2 — Apply                  Base VPC PASSED (2026-07-25). Private subnet + NAT Gateway
-                                    PLANNED, BLOCKED on your explicit go-ahead for this specific run.
+✓ Phase 2 — Apply                  PASSED in full (base VPC + private subnet/NAT, both authorized
+                                    separately, both against Floci, 2026-07-25)
 
 vpc_id:            vpc-e705db27      (Floci-emulated, not real AWS)
 public_subnet_id:  subnet-d7a7dd89   (Floci-emulated, not real AWS)
-private_subnet_id: (populated once the private-subnet/NAT apply is authorized and run)
+private_subnet_id: subnet-9f7fb509   (Floci-emulated, not real AWS)
 ```

@@ -10,14 +10,12 @@ phase 0 (compute belongs in private subnets, never the public one).
 
 Phase 1 (plan reviewed, `tfplan` file exists and matches what was shown).
 
-## Status: base VPC APPLIED (against Floci); private-subnet/NAT extension PLANNED, BLOCKED
+## Status: APPLIED in full (against Floci) — base VPC + private subnet/NAT extension
 
-Base 5-resource VPC authorized 2026-07-25 ("yes go ahead"), applied against the local Floci emulator
-(`use_floci=true`), not real AWS. The private subnet + NAT Gateway addition (5 more resources) has a
-reviewed plan (see phase 1 notes) but has **not** been applied — same apply-needs-explicit-go-ahead
-rule applies to this run as its own separate authorization, not covered by the earlier go-ahead. The
-real-AWS path is still blocked separately on phase 0's credentials gate — all of this is scoped to
-Floci only.
+Both the base 5-resource VPC and the private-subnet/NAT extension (5 more resources) are applied,
+each authorized separately with its own explicit "yes go ahead" (2026-07-25, both same day). All
+against the local Floci emulator (`use_floci=true`), not real AWS. The real-AWS path is still blocked
+separately on phase 0's credentials gate.
 
 ## Steps (as run)
 
@@ -35,10 +33,11 @@ Floci only.
 
 ## Completion gate — private subnet + NAT Gateway (5 more resources)
 
-- [ ] User explicitly authorized this apply (not yet given — plan reviewed and saved to `tfplan`,
-      waiting on a separate explicit go-ahead for this specific run)
-- [ ] `terraform apply` completed: 5 added, 0 changed, 0 destroyed
-- [ ] `aws ec2 describe-subnets` shows the private subnet in `available` state, in AZ `us-east-1b`
+- [x] User explicitly authorized this apply (2026-07-25, "yes", a separate go-ahead from the base
+      VPC's — not covered by the earlier authorization)
+- [x] `terraform apply` completed: 5 added, 0 changed, 0 destroyed
+- [x] `aws ec2 describe-subnets` shows the private subnet in `available` state, in AZ `us-east-1b`
+      (confirmed independently, not just Terraform's own output)
 
 ## Notes / decisions
 
@@ -60,3 +59,18 @@ Independently verified via `aws ec2 describe-vpcs --vpc-ids vpc-e705db27` agains
 This state is local-only (Floci container, local Terraform state file) — it doesn't touch real AWS
 and isn't billable. Teardown (see `../teardown.md`) still requires its own explicit go-ahead before
 `terraform destroy`, same as any other mutating command.
+
+**Private subnet + NAT Gateway extension (same day, second authorized apply):** ran
+`terraform apply tfplan` again against the plan reviewed in phase 1's later notes. 5 more resources
+created against Floci:
+
+- `aws_subnet.private` → `subnet-9f7fb509` (AZ `us-east-1b`, CIDR `10.0.2.0/24`)
+- `aws_eip.nat` → `eipalloc-5acc7197ff779ac42`
+- `aws_nat_gateway.main` → `nat-8564af9dd015c7e2f`
+- `aws_route_table.private` → `rtb-bd34c82d`
+- `aws_route_table_association.private` → `rtbassoc-399eb518`
+
+Outputs updated: `private_subnet_id = subnet-9f7fb509`. Independently verified via
+`aws ec2 describe-subnets --subnet-ids subnet-9f7fb509` — `State: available`,
+`AvailabilityZone: us-east-1b`, `MapPublicIpOnLaunch: false` (correctly private, unlike the public
+subnet). Same local-only, non-billable scope as the base VPC.
