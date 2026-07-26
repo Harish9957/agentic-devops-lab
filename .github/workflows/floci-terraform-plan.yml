@@ -1,0 +1,42 @@
+name: floci-terraform-plan
+
+# Plan only, against Floci — no apply. Matches this repo's rule that terraform apply/destroy
+# always needs an explicit, per-run human go-ahead, never automation.
+on:
+  push:
+    paths:
+      - "02-terraform-vpc/**"
+      - ".github/workflows/floci-terraform-plan.yml"
+  workflow_dispatch: {}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    services:
+      floci:
+        image: floci/floci:latest
+        ports:
+          - 4566:4566
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for Floci
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:4566 > /dev/null && exit 0
+            sleep 1
+          done
+          echo "Floci did not become ready in time" >&2
+          exit 1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: terraform init
+        working-directory: 02-terraform-vpc
+        run: terraform init -backend-config=backend-floci.hcl
+
+      - name: terraform plan
+        working-directory: 02-terraform-vpc
+        run: terraform plan -var="use_floci=true"
