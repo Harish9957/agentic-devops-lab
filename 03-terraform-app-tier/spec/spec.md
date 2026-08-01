@@ -80,8 +80,9 @@ Added per-phase as resources are created. Anticipated, not yet real:
   spanning both public subnets, nginx running as an OS process — applied, then superseded by phase 3
 - [`phases/phase3-eks-nginx-hpa.md`](./phases/phase3-eks-nginx-hpa.md) — EKS cluster + node group,
   nginx as a Pod (Deployment + Service + HPA), ALB routing to the node group via NodePort, applied
-
-Later phases (DynamoDB) get scoped and added here once phase 3 is solid — don't pre-write them now.
+- [`phases/phase4-dynamodb.md`](./phases/phase4-dynamodb.md) — DynamoDB table + IAM policy granting
+  the EKS node group's role access to it; scoped honestly as infra-only (no nginx-to-DynamoDB
+  wiring — nginx serves static content and has no natural DynamoDB dependency), not yet applied
 
 Teardown is documented separately, not as a phase: [`teardown.md`](./teardown.md).
 
