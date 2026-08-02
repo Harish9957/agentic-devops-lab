@@ -37,32 +37,30 @@ Added per-phase as resources are created. Anticipated, not yet real:
 
 ## Non-Negotiable Rules
 
-1. **Phased progression**: same as `01-kind-nginx` / `02-terraform-vpc` — complete phases
-   sequentially, confirm each gate before advancing. Only the next phase gets scoped and written;
-   don't pre-write the whole roadmap (see `Phases` below).
-2. **Plan before apply, always reviewed**: `terraform plan` output gets read and understood before
-   any `terraform apply`.
-3. **No `apply` or `destroy` without explicit go-ahead, every single time** — repo-wide rule (see
-   root `CLAUDE.md`), applies identically here to every resource this use case adds.
-4. **Remote state from the start**: unlike `02` (which started local and migrated once solid), this
+Bound by the repo-wide phase conventions in root [`CLAUDE.md`](../../CLAUDE.md#phase-conventions-non-negotiable-applies-to-every-use-case)
+(phased progression, plan-before-apply, no apply/destroy without go-ahead, etc.) — nothing below
+repeats those, only what's specific to this use case.
+
+1. **Remote state from the start**: unlike `02` (which started local and migrated once solid), this
    use case goes straight to the shared S3 + DynamoDB backend in `../terraform-state-backend/`, key
    `03-terraform-app-tier/terraform.tfstate` — that migration was already learned and verified in `02`, no
    need to relearn it here.
-5. **Consume `02`'s outputs via `terraform_remote_state`, never hardcode IDs**: `vpc_id` and
+2. **Consume `02`'s outputs via `terraform_remote_state`, never hardcode IDs**: `vpc_id` and
    `private_subnet_id` (and `public_subnet_id` for the ALB) come from a `terraform_remote_state` data
    source reading `02-terraform-vpc`'s state, exactly as `02`'s own spec anticipated for any later
    use case needing its VPC.
-6. **Design rule inherited from `02`, still non-negotiable here**: compute goes in the private
-   subnet, never the public one. The EKS node group's instances use `private_subnet_id`; only the
-   ALB itself (internet-facing by nature) uses `public_subnet_id`. DynamoDB is a regional service,
-   not VPC-attached, so this rule doesn't apply to it directly — but nothing else this use case adds
-   should end up in the public subnet.
-7. **ALB needs 2+ AZs — resolved, not just documented**: `02-terraform-vpc` originally had only one
+3. **Design rule inherited from `02`, still non-negotiable here**: compute goes in the private
+   subnet, never the public one — see
+   [`02-terraform-vpc/spec/phases/phase0-preflight.md`](../02-terraform-vpc/spec/phases/phase0-preflight.md#design-rule-non-negotiable-applies-to-every-phase-in-this-use-case)
+   for the rule itself. Applied here: the EKS node group's instances use `private_subnet_id`; only
+   the ALB itself (internet-facing by nature) uses `public_subnet_id`. DynamoDB is a regional
+   service, not VPC-attached, so the rule doesn't apply to it directly.
+4. **ALB needs 2+ AZs — resolved, not just documented**: `02-terraform-vpc` originally had only one
    public subnet. Confirmed empirically (not just from docs) that even Floci enforces AWS's 2-AZ
    requirement for ALBs — a single-subnet apply genuinely failed. Fixed by adding a second public
    subnet to `02` (`us-east-1c`) — see `02-terraform-vpc/spec/phases/phase2-apply.md` and this use
    case's `phases/phase2-alb-asg.md`.
-8. **Floci is a control-plane emulator for ALB/EC2, not a full data-plane one — but its EKS support
+5. **Floci is a control-plane emulator for ALB/EC2, not a full data-plane one — but its EKS support
    is much better**: EC2's `user_data` never executes and the ALB's DNS name doesn't actually proxy
    traffic (both Floci-specific, not defects here — see `phases/phase2-alb-asg.md` Notes). EKS,
    however, runs a genuine `rancher/k3s` server with a real API and `metrics-server` — confirmed

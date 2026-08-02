@@ -42,14 +42,14 @@ instances, etc.) should consume these via `terraform_remote_state`, pointed at t
 
 ## Non-Negotiable Rules
 
-1. **Phased progression**: same as `01-kind-nginx` — complete phases sequentially, confirm each
-   gate before advancing.
-2. **Plan before apply, always reviewed**: `terraform plan` output gets read and understood before
-   any `terraform apply`.
-3. **No `apply` or `destroy` without explicit go-ahead, every single time** — not just once at the
-   start of this use case. This is a repo-wide rule for any real-cloud work (see root `CLAUDE.md`);
-   it's called out here because this is the first use case where it applies.
-4. **Remote state with locking**: state lives in the shared S3 bucket + DynamoDB lock table defined
+Bound by the repo-wide phase conventions in root [`CLAUDE.md`](../../CLAUDE.md#phase-conventions-non-negotiable-applies-to-every-use-case)
+(phased progression, plan-before-apply, no apply/destroy without go-ahead, etc.) — this is the first
+use case where the apply/destroy go-ahead rule actually applies, called out below since it's new
+here, not because it differs from the shared rule.
+
+1. **No `apply` or `destroy` without explicit go-ahead, every single time** — not just once at the
+   start of this use case. First use case where this repo-wide rule (root `CLAUDE.md`) applies.
+2. **Remote state with locking**: state lives in the shared S3 bucket + DynamoDB lock table defined
    in [`../terraform-state-backend/`](../terraform-state-backend/), not locally. This started as
    local-only state (deliberately, to not conflate learning VPC basics with state management in the
    same pass) and was migrated once that was solid — see phase 2 notes and

@@ -21,9 +21,12 @@ to roughly two dozen over time. Conventions:
   when that use case's internals change.
 - Shared, cross-use-case things stay at repo root: this `CLAUDE.md`, `requirements.txt`, the shared
   `.venv/`, `.env` (credentials — Anthropic API key, etc. — reused across use cases rather than
-  duplicated per directory), and `terraform-state-backend/` (shared S3+DynamoDB state backend for
+  duplicated per directory), `terraform-state-backend/` (shared S3+DynamoDB state backend for
   every Terraform use case — unnumbered, since it's infrastructure other use cases depend on rather
-  than a use case with its own forward-building narrative, same reasoning as `teardown.md` below).
+  than a use case with its own forward-building narrative, same reasoning as `teardown.md` below),
+  `tools.yaml` (single source of truth for tool/chart versions confirmed working, replacing version
+  confirmations scattered as prose across phase docs), and `scripts/preflight-check.sh` (shared
+  CLI-tools + real-AWS-or-Floci credential check every Terraform use case's phase0 runs).
 - Only scope and write the next use case once the current one is solid. Don't pre-create empty
   numbered folders for use cases that haven't been designed yet.
 
@@ -54,14 +57,26 @@ cd 01-kind-nginx
 python3 agent.py    # runs the full spec/spec.md phase progression; needs ANTHROPIC_API_KEY in ../.env
 ```
 
-## Process (applies to every use case)
+## Phase Conventions (non-negotiable, applies to every use case)
 
-- `spec/spec.md` + `spec/phases/phaseN-*.md`: `spec.md` states the overall goal and non-negotiable
-  rules and links to phase docs; each `phaseN-*.md` has its own goal, steps, and completion gate.
-  Don't start phase N until phase N-1's gate is checked off. Only write the next phase doc once the
-  current one is solid — don't pre-write the whole roadmap.
-- **Tests are the actual gate, not the model's judgment.** Every use case's completion gates should
-  be backed by a real script with a hard pass/fail exit code, not the agent's self-report.
+Each use case's `spec/spec.md` states its own goal and use-case-specific rules, then links to
+`spec/phases/phaseN-*.md` docs (goal, steps, completion gate). A use case's "Non-Negotiable Rules"
+section should only list what's actually specific to it — the rules below are repo-wide and don't
+need restating per use case, just link back here.
+
+- **Phased progression**: complete phases sequentially; halt after each phase and confirm its gate
+  before advancing. Don't start phase N until phase N-1's gate is checked off. Only scope and write
+  the next phase doc once the current one is solid — don't pre-write the whole roadmap up front.
+- **Tests are the actual gate, not the model's judgment.** Every completion gate is backed by a real
+  script/check with a hard pass/fail result, not the agent's self-report.
+- **No partial states**: if a phase fails mid-way, report the exact step and output before stopping —
+  don't paper over it or silently retry into a different state.
+- **Idempotent operations**: every command must be safe to re-run without side effects.
+- **Plan before apply, always reviewed** (Terraform use cases, `02` onward): `terraform plan` output
+  gets read and understood before any `terraform apply`. Applies to `helm_release`/
+  `kubernetes_manifest` resources exactly as much as `aws_*` ones — no raw `helm install`/`kubectl
+  apply` shortcuts outside Terraform once a use case has adopted the Terraform `helm`/`kubernetes`
+  providers.
 - Teardown/reset operations are not phases (a phase implies forward progress that later phases build
   on; teardown is the opposite). Give them their own unnumbered `spec/teardown.md` instead — see
   `01-kind-nginx/spec/teardown.md` for the pattern.

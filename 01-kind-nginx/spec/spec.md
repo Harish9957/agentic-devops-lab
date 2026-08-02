@@ -13,10 +13,9 @@ see the notes in `CLAUDE.md` on which of those do and don't map onto a local Kin
 
 ## Non-Negotiable Rules
 
-1. **Phased progression**: Complete phases sequentially; halt after each phase and confirm tests pass before advancing
-2. **Test-first approach**: Run validation checks after every phase — halt on failure, surface the error clearly
-3. **No partial states**: If a phase fails mid-way, report the exact step and output before stopping
-4. **Idempotent operations**: Every command must be safe to re-run without side effects
+Bound by the repo-wide phase conventions in root [`CLAUDE.md`](../../CLAUDE.md#phase-conventions-non-negotiable-applies-to-every-use-case)
+(phased progression, tests as the real gate, no partial states, idempotent operations). Nothing
+use-case-specific to add here — this use case doesn't deviate from the shared conventions.
 
 ## Phases
 

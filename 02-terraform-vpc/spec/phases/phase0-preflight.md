@@ -11,12 +11,17 @@ Nothing — first phase of this use case.
 
 ## Checks
 
-- `terraform version` exits 0
-- Either: `aws sts get-caller-identity` exits 0 against real AWS, **or**: a local
-  [Floci](https://floci.io/) emulator is running (`floci start`) and `var.use_floci = true` is set,
-  so `terraform plan`/`apply` target `http://localhost:4566` instead of real AWS. Floci is the
-  faster path for iterating on this use case without needing real AWS credentials or spending money;
-  real AWS remains the default (`use_floci = false`) for whenever credentials are configured.
+Run the shared preflight script (also used by `03`/`04`, see its header for what it does):
+
+```bash
+../scripts/preflight-check.sh --tools "terraform"
+```
+
+It checks `terraform version` exits 0, then either `aws sts get-caller-identity` against real AWS,
+or a local [Floci](https://floci.io/) emulator reachable at `http://localhost:4566` — Floci is the
+faster path for iterating without real AWS credentials or spending money; set `var.use_floci = true`
+to actually target it once the script confirms it's up. Real AWS remains the default
+(`use_floci = false`) for whenever credentials are configured.
 
 ## Design rule (non-negotiable, applies to every phase in this use case)
 

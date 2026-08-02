@@ -66,22 +66,21 @@ Added per-phase as resources are created. Anticipated, not yet real:
 
 ## Non-Negotiable Rules
 
-1. **Phased progression**: same as `01`/`02`/`03` — complete phases sequentially, confirm each gate
-   before advancing. Only the next phase gets scoped and written; don't pre-write the whole roadmap.
-2. **Plan before apply, always reviewed**: `terraform plan` output gets read and understood before
-   any `terraform apply` — applies to `helm_release` and `kubernetes_manifest` resources exactly as
-   much as `aws_*` ones. No raw `helm install` or `kubectl apply` CLI shortcuts outside Terraform;
-   KEDA is installed via the Terraform `helm` provider's `helm_release` resource, consistent with
-   `03` phase 3's move away from shell-heredoc-embedded YAML toward Terraform-native resources.
-3. **No `apply` or `destroy` without explicit go-ahead, every single time** — repo-wide rule (see
-   root `CLAUDE.md`), applies identically here, including to the HPA removal in rule 5 below.
-4. **Consume `03`'s outputs via `terraform_remote_state`, never hardcode IDs**: `eks_cluster_name`
+Bound by the repo-wide phase conventions in root [`CLAUDE.md`](../../CLAUDE.md#phase-conventions-non-negotiable-applies-to-every-use-case)
+(phased progression, plan-before-apply, no apply/destroy without go-ahead, etc.) — nothing below
+repeats those, only what's specific to this use case. One clarification worth calling out: the
+plan-before-apply convention applies to `helm_release`/`kubernetes_manifest` resources exactly as
+much as `aws_*` ones — KEDA is installed via the Terraform `helm` provider's `helm_release`
+resource, no raw `helm install`/`kubectl apply` shortcuts, consistent with `03` phase 3's move away
+from shell-heredoc-embedded YAML toward Terraform-native resources.
+
+1. **Consume `03`'s outputs via `terraform_remote_state`, never hardcode IDs**: `eks_cluster_name`
    comes from a `terraform_remote_state` data source reading `03-terraform-app-tier`'s state, exactly
    as `03`'s own spec anticipated for any later use case needing its cluster. Live connection details
    (endpoint, CA cert, auth) are re-derived from that name via `data` sources against the AWS/Floci
    API directly — never duplicated as copy-pasted literals, and never requiring `03` to add new
    outputs just to satisfy `04`.
-5. **KEDA supersedes `03`'s HPA — it does not run alongside it, and this requires touching `03`'s
+2. **KEDA supersedes `03`'s HPA — it does not run alongside it, and this requires touching `03`'s
    files.** A KEDA `ScaledObject` generates and manages its own HPA under the hood; a second,
    manually-defined HPA (`03`'s `kubernetes_horizontal_pod_autoscaler_v2.nginx`) targeting the same
    Deployment conflicts with it (`most recent HorizontalPodAutoscaler event` fights, unpredictable
@@ -92,22 +91,23 @@ Added per-phase as resources are created. Anticipated, not yet real:
    (once scoped) will delete `03`'s `kubernetes_horizontal_pod_autoscaler_v2.nginx` resource block
    from `03/k8s-nginx.tf` and run `terraform apply` **inside `03`'s own directory** to remove it,
    immediately before applying `04`'s `ScaledObject`. That removal gets its own explicit go-ahead,
-   separate from the general apply-gate in rule 3, because it mutates a directory `04` doesn't own.
-6. **Floci feasibility is an open question, stated upfront, not assumed away.** The cron scaler was
+   separate from the general apply-gate in root `CLAUDE.md`, because it mutates a directory `04`
+   doesn't own.
+3. **Floci feasibility is an open question, stated upfront, not assumed away.** The cron scaler was
    chosen specifically because it has zero dependency on any additional emulated AWS service — see
    `Goal` above. Whether KEDA's operator, webhook, and CRDs actually install and reconcile cleanly
    against Floci's k3s-backed EKS control plane is **unverified as of this spec**. Phase 1's entire
    purpose is to test that empirically, the same way `03` tested Floci's EKS fidelity before
    committing to that architecture, rather than assuming a Helm chart that installs cleanly on real
    AWS will behave identically here.
-7. **Known Terraform+CRD ordering risk, planned around rather than ignored**: `kubernetes_manifest`
+4. **Known Terraform+CRD ordering risk, planned around rather than ignored**: `kubernetes_manifest`
    resources referencing a CRD (like KEDA's `ScaledObject`) generally cannot be reliably planned in
    the same `apply` that installs the CRD via `helm_release` — the provider needs the CRD's schema to
    already be registered in the cluster to plan against it. This is a well-known Terraform/Kubernetes
    provider limitation, not Floci-specific. Phase 1 (install KEDA, no `ScaledObject` yet) and phase 2
    (add the `ScaledObject`) are separate applies specifically to sidestep this, not merged for
    convenience.
-8. **KEDA installs into its own namespace** (`keda`), not `default` and not wherever `nginx` lives —
+5. **KEDA installs into its own namespace** (`keda`), not `default` and not wherever `nginx` lives —
    standard KEDA practice, keeps the autoscaling control plane separate from the workload it scales.
 
 ## Phases
@@ -119,7 +119,7 @@ Added per-phase as resources are created. Anticipated, not yet real:
   namespace; verify operator/webhook pods `Running` and CRDs `Established` against Floci; no
   `ScaledObject` yet, `03`'s HPA untouched
 - `phases/phase2-scaledobject-cron.md` (not yet written) — add the cron `ScaledObject` for `nginx`;
-  remove `03`'s manual HPA (rule 5); verify KEDA's auto-generated HPA appears and replica count
+  remove `03`'s manual HPA (rule 2); verify KEDA's auto-generated HPA appears and replica count
   actually follows the cron schedule's start/end windows
 
 Not committed, possible future extension once phases 1-2 are solid and only if they prove KEDA works

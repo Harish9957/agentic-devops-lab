@@ -1,0 +1,80 @@
+# tools.yaml
+# Single source of truth for tool/chart versions confirmed to work in this repo, across
+# every numbered use case. Replaces version confirmations that used to live only as prose
+# scattered inside individual phase docs (e.g. "confirmed 2026-07-24: kind v0.31.0").
+#
+# Schema per entry:
+#   name          tool or chart identifier
+#   category      cli | helm-chart
+#   version       version actually confirmed working, or null if not yet pinned
+#   verified_on   date (YYYY-MM-DD) the version column was last confirmed, or null
+#   used_by       use case directories that depend on this entry
+#   notes         install source, caveats, why a version isn't pinned yet, etc.
+#
+# When a phase confirms a new version (or the first version) for something listed here,
+# update this file in that phase's commit — don't just leave it in prose in the phase doc.
+
+tools:
+  - name: kind
+    category: cli
+    version: "v0.31.0"
+    verified_on: "2026-07-24"
+    used_by: ["01-kind-nginx"]
+    notes: Confirmed via `kind version` in 01 phase0. Local-only tool, not used from 02 onward.
+
+  - name: kubectl
+    category: cli
+    version: "v1.36.0"
+    verified_on: "2026-07-24"
+    used_by: ["01-kind-nginx", "04-keda-autoscaling"]
+    notes: >
+      Client version confirmed in 01 phase0 (`kubectl version --client`). 04 also requires
+      kubectl (installed into .bin/, not system-wide) but hasn't independently pinned an
+      exact version yet — its phase0 only confirmed `kubectl version --client` exits 0.
+
+  - name: docker
+    category: cli
+    version: null
+    verified_on: "2026-07-24"
+    used_by: ["01-kind-nginx"]
+    notes: Only checked that `docker info` exits 0 (daemon running), no version pinned.
+
+  - name: terraform
+    category: cli
+    version: "v1.15.1"
+    verified_on: "2026-07-25"
+    used_by: ["02-terraform-vpc", "03-terraform-app-tier", "04-keda-autoscaling", "terraform-state-backend"]
+    notes: >
+      Confirmed via `terraform version` in 02/03/terraform-state-backend phase0 docs, all on the
+      same machine. A newer 1.15.8 was available but not required. 04 depends on the same
+      installed binary but hasn't independently re-confirmed the version.
+
+  - name: helm
+    category: cli
+    version: null
+    verified_on: null
+    used_by: ["04-keda-autoscaling"]
+    notes: >
+      04 phase0 only confirmed `helm version` exits 0 (tool installed into .bin/, not
+      system-wide) — no exact version recorded yet. Pin it here once phase0 actually resolves.
+
+  - name: floci
+    category: cli
+    version: "floci/floci:latest"
+    verified_on: "2026-07-25"
+    used_by: ["02-terraform-vpc", "03-terraform-app-tier", "04-keda-autoscaling"]
+    notes: >
+      Local AWS emulator (https://floci.io/), installed via `brew install floci-io/floci/floci`.
+      Runs the `floci/floci:latest` image — a rolling tag, not a pinned version, so results can
+      drift between sessions. Confirmed (2026-08-01, see 04 phase0 notes) that Floci does not
+      persist state across container restarts — re-seeding is required after any restart.
+
+  - name: keda
+    category: helm-chart
+    version: null
+    verified_on: null
+    used_by: ["04-keda-autoscaling"]
+    notes: >
+      Chart repo: https://kedacore.github.io/charts, chart name kedacore/keda. 04 phase0 attempted
+      `helm show chart kedacore/keda` to pin a version but never completed the run (blocked on
+      Floci having no persisted state from 03) — still genuinely unpinned, not an oversight.

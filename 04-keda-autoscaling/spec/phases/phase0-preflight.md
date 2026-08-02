@@ -42,9 +42,16 @@ pattern (`aws eks get-token`, with the Floci endpoint/credentials override appli
 
 ## Checks
 
-- `terraform version`, `helm version`, `kubectl version --client` all exit 0.
-- Floci running (`floci start`) and `var.use_floci = true`, same choice `02`/`03` made — real AWS
-  path stays the untested default, consistent with both.
+Run the shared preflight script (same one `02`/`03` use, see `scripts/preflight-check.sh`'s header),
+extended with the extra tools this use case needs beyond Terraform:
+
+```bash
+../scripts/preflight-check.sh --tools "terraform helm kubectl"
+```
+
+Same real-AWS-or-Floci choice `02`/`03` made — real AWS path stays the untested default, consistent
+with both. Set `var.use_floci = true` to actually target Floci once the script confirms it's up.
+
 - A minimal `terraform_remote_state` data source in `04` reading
   `s3://agentic-devops-lab-tfstate/03-terraform-app-tier/terraform.tfstate` resolves and exposes
   `eks_cluster_name` — proves `04` can read `03`'s state, mirroring exactly how `03` phase 0 proved it
@@ -74,18 +81,63 @@ is where installing it for real against Floci gets tested empirically, per `spec
 
 ## Completion gate
 
-- [ ] `terraform version` / `helm version` / `kubectl version --client` all exit 0
-- [ ] Floci path confirmed working (same as `02`/`03`); real-AWS path still untested
-- [ ] `terraform_remote_state` data source resolves `03`'s `eks_cluster_name`
-- [ ] `data "aws_eks_cluster"` resolves a live endpoint + CA cert from that name, against Floci
-- [ ] `kubectl get nodes/deployment/svc/hpa` (via a kubeconfig pointed at `03`'s cluster) shows `03`'s
-      resources still `Ready`/`Running`/applied, unmodified by this preflight
-- [ ] `helm show chart kedacore/keda` resolves; chart version to pin for phase 1 recorded here
+- [x] `terraform version` / `helm version` / `kubectl version --client` all exit 0 — tools installed
+      locally into this repo's `.bin/` (not system-wide; sandbox network policy required explicit
+      allow-listing of `dl.k8s.io`, `get.helm.sh`, `awscli.amazonaws.com` first)
+- [ ] Floci path confirmed working — **BLOCKED, see below**
+- [ ] `terraform_remote_state` data source resolves `03`'s `eks_cluster_name` — not attempted, blocked
+      by the item above
+- [ ] `data "aws_eks_cluster"` resolves a live endpoint + CA cert from that name, against Floci — not
+      attempted
+- [ ] `kubectl get nodes/deployment/svc/hpa` shows `03`'s resources still `Ready`/`Running` — not
+      attempted; per the finding below, there is currently nothing to get
+- [ ] `helm show chart kedacore/keda` resolves — not attempted this run
 
 ## Notes / decisions
 
 Cluster-access pattern decided above (option 2: re-derive via `data "aws_eks_cluster"`, don't add new
-outputs to `03`). Everything else in this doc is a template — checks haven't been run yet; this task
-was scoped as planning/spec-writing only, no terraform/helm/kubectl commands executed. Results get
-filled in here once phase 0 is actually run, same pattern `02`/`03` used (their phase 0 docs were
-written once, then updated in place with real findings after running the checks).
+outputs to `03`) — still the right design, unaffected by the finding below.
+
+**Real finding, checked empirically 2026-08-01, not assumed:** Floci was not running when this phase
+was picked up. Two exited containers from a prior session existed (`floci-verify`, `floci-fix-verify`,
+both `Exited (255)` ~2026-07-29) — no `floci` CLI was installed in this environment, so
+`docker start floci-verify` was used directly instead of `floci start`. The container came back up and
+`http://localhost:4566` responded, but **all emulated state was empty**:
+- `aws eks list-clusters` → `{"clusters": []}` — `03`'s EKS cluster (`agentic-devops-lab-03-eks`) is
+  gone.
+- `aws s3api list-buckets` → `{"Buckets": []}` — the `agentic-devops-lab-tfstate` bucket holding every
+  use case's remote Terraform state doesn't exist on this Floci instance.
+- `aws dynamodb list-tables` → `{"TableNames": []}` — the `agentic-devops-lab-tflocks` lock table is
+  also gone.
+
+**Conclusion: Floci does not persist state across container restarts** (or at least not across
+whatever gap happened here) — restarting an exited container brings the process back but not its
+data, unlike a normal Docker volume-backed service. This means `03`'s applied EKS/nginx/HPA
+infrastructure only ever existed for the lifetime of the Floci container it was applied against, and
+that container's data is gone now. `03`'s own remote state is also unreachable here, since its S3
+backend bucket doesn't exist on this instance either.
+
+This is a genuine blocker for phase 0, not a phase-1 concern: there is currently no live `03` cluster
+for `04` to reference, and `03`'s Terraform state itself can't be read without first re-seeding the
+shared state-backend fixtures (same seeding step the `.github/workflows/floci-terraform-*.yml`
+pipelines do per-run, for the same underlying reason — a CI runner's Floci container starts empty
+too). Re-establishing a working `03` cluster on this Floci instance would require re-seeding the state
+backend and re-running `03`'s applies from phase 1 through phase 3 — each of those is a real
+`terraform apply`, requiring explicit per-run go-ahead same as any other apply, not something to do
+as a side effect of a `04` preflight check.
+
+**Not resolved by this phase; needs a decision before phase 1 can proceed**, see open question below.
+
+## Open question (for the user)
+
+`03`'s infrastructure needs to exist on whatever Floci instance `04` will test against, and right now
+it doesn't. Options:
+1. Re-seed the state-backend fixtures and re-apply `03` (phases 1-3, or at minimum phase 3 if state
+   for 1-2 can be skipped) against this Floci instance — real `terraform apply` calls, each needing
+   explicit go-ahead.
+2. Treat this as a standing Floci limitation and investigate whether Floci supports a persistent data
+   volume/snapshot mode (not checked yet) so this doesn't recur every time the container restarts.
+3. Defer `04` entirely until real AWS credentials are available, sidestepping Floci's persistence gap
+   altogether — bigger change, affects `02`/`03` too, not just `04`.
+Recommend option 1 for now (fastest path to an actual KEDA test), with option 2 worth a quick check
+since this will otherwise repeat every session.
